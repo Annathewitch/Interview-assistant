@@ -1,18 +1,38 @@
 "use client";
 import { useState, useEffect } from "react";
 
+type Job = {
+  id: number;
+  company: string;
+  role: string;
+  salary: string;
+  location: string;
+  status: string;
+};
+
+type Interview = {
+  id: number;
+  jobId: number;
+  date: string;
+  time: string;
+  channel: string;
+  transcript?: string;
+};
+
 const STATUS = [
   "刚投递", "已测评", "一面", "二面", "三面", "HR面", "Offer", "已挂"
 ];
 
 export default function Page() {
-  const [topTab, setTopTab] = useState("岗位");
+  const [topTab, setTopTab] = useState<"岗位" | "面试" | "复盘">("岗位");
   const [bottomTab, setBottomTab] = useState("首页");
 
+  // 月份切换（2026年）
   const [currentYear, setCurrentYear] = useState(2026);
   const [currentMonth, setCurrentMonth] = useState(4);
 
-  const [jobs, setJobs] = useState([]);
+  // 岗位
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [showAddPop, setShowAddPop] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
   const [company, setCompany] = useState("");
@@ -21,17 +41,20 @@ export default function Page() {
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("刚投递");
 
-  const [interviews, setInterviews] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
+  // 面试
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("");
   const [channel, setChannel] = useState("腾讯会议");
-  const [selectedDay, setSelectedDay] = useState(null);
-  const [currentInterview, setCurrentInterview] = useState(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [currentInterview, setCurrentInterview] = useState<Interview | null>(null);
 
+  // 录音
   const [recording, setRecording] = useState(false);
   const [report, setReport] = useState("");
 
+  // 本地存储
   useEffect(() => {
     const j = JSON.parse(localStorage.getItem("jobs") || "[]");
     const i = JSON.parse(localStorage.getItem("interviews") || "[]");
@@ -39,19 +62,20 @@ export default function Page() {
     setInterviews(i);
   }, []);
 
-  const saveJobs = (data) => {
+  const saveJobs = (data: Job[]) => {
     setJobs(data);
     localStorage.setItem("jobs", JSON.stringify(data));
   };
 
-  const saveInterviews = (data) => {
+  const saveInterviews = (data: Interview[]) => {
     setInterviews(data);
     localStorage.setItem("interviews", JSON.stringify(data));
   };
 
+  // 添加岗位
   const addJob = () => {
     if (!company || !role) return;
-    const newJob = {
+    const newJob: Job = {
       id: Date.now(), company, role, salary, location, status
     };
     saveJobs([newJob, ...jobs]);
@@ -60,9 +84,10 @@ export default function Page() {
     setRole("");
   };
 
+  // 提交面试安排
   const addInterview = () => {
     if (!selectedJob || !interviewDate || !interviewTime) return;
-    const newInterview = {
+    const newInterview: Interview = {
       id: Date.now(),
       jobId: selectedJob.id,
       date: interviewDate,
@@ -80,12 +105,14 @@ export default function Page() {
     setInterviewTime("");
   };
 
-  const handleSelectDay = (day) => {
+  // 点击日期
+  const handleSelectDay = (day: string) => {
     setSelectedDay(day);
     const list = interviews.filter(it => it.date === day);
     setCurrentInterview(list[0] || null);
   };
 
+  // 录音
   const startRecord = () => {
     if (!currentInterview) return;
     setRecording(true);
@@ -122,6 +149,7 @@ export default function Page() {
     }
   };
 
+  // 去复盘
   const goToReport = () => {
     if (!currentInterview) return;
     const job = jobs.find(j => j.id === currentInterview.jobId);
@@ -140,11 +168,21 @@ ${currentInterview.transcript || "暂无录音"}
     setTopTab("复盘");
   };
 
-  const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
-  const getFirstDayOfMonth = (y, m) => new Date(y, m - 1, 1).getDay();
-  const dayHasInterview = (day) => interviews.some(it => it.date === day);
+  // 获取当月天数
+  const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 
-  const getStatusColor = (s) => {
+  // 获取当月1号是周几（0=周日，1=周一...6=周六）
+  const getFirstDayOfMonth = (y: number, m: number) => {
+    return new Date(y, m - 1, 1).getDay();
+  };
+
+  // 判断日期是否有面试
+  const dayHasInterview = (day: string) => {
+    return interviews.some(it => it.date === day);
+  };
+
+  // 状态颜色
+  const getStatusColor = (s: string) => {
     if (s.includes("面")) return "#4F46E5";
     if (s === "Offer") return "#10B981";
     if (s === "已挂") return "#9CA3AF";
@@ -153,11 +191,13 @@ ${currentInterview.transcript || "暂无录音"}
 
   return (
     <div style={appContainer}>
+      {/* 顶部 */}
       <div style={headerStyle}>
         <div style={logoStyle}>求职助手</div>
         <input placeholder="搜索公司/岗位" style={searchStyle} />
       </div>
 
+      {/* 只在【首页】显示顶部标签：岗位/面试/复盘 */}
       {bottomTab === "首页" && (
         <div style={topTabBarStyle}>
           <div onClick={() => setTopTab("岗位")}
@@ -175,9 +215,11 @@ ${currentInterview.transcript || "暂无录音"}
         </div>
       )}
 
+      {/* 内容区 */}
       <div style={contentStyle}>
         {bottomTab === "首页" && (
           <>
+            {/* 岗位 */}
             {topTab === "岗位" && (
               <div style={listStyle}>
                 {jobs.length === 0 && <div style={emptyStyle}>暂无岗位，点击 + 添加</div>}
@@ -187,7 +229,10 @@ ${currentInterview.transcript || "暂无录音"}
                     <div style={infoStyle}>{job.company} · {job.salary}</div>
                     <div style={locationStyle}>{job.location}</div>
                     <button
-                      onClick={() => { setSelectedJob(job); setTopTab("面试"); }}
+                      onClick={() => {
+                        setSelectedJob(job);
+                        setTopTab("面试");
+                      }}
                       style={{ ...tagStyle, backgroundColor: getStatusColor(job.status) }}
                     >
                       {job.status}
@@ -197,18 +242,30 @@ ${currentInterview.transcript || "暂无录音"}
               </div>
             )}
 
+            {/* 面试页面（2026年真实日历） */}
             {topTab === "面试" && (
               <div style={interviewPageStyle}>
                 <div style={calendarCardStyle}>
+                  {/* 月份切换 */}
                   <div style={calendarHeaderStyle}>
                     <div onClick={() => {
-                      if (currentMonth === 1) { setCurrentMonth(12); setCurrentYear(2025); }
-                      else setCurrentMonth(currentMonth - 1);
+                      if (currentMonth === 1) {
+                        setCurrentMonth(12);
+                        setCurrentYear(2025);
+                      } else {
+                        setCurrentMonth(currentMonth - 1);
+                      }
                     }} style={arrowStyle}>◀</div>
+
                     <div style={monthStyle}>{currentYear}年{currentMonth}月</div>
+
                     <div onClick={() => {
-                      if (currentMonth === 12) { setCurrentMonth(1); setCurrentYear(2027); }
-                      else setCurrentMonth(currentMonth + 1);
+                      if (currentMonth === 12) {
+                        setCurrentMonth(1);
+                        setCurrentYear(2027);
+                      } else {
+                        setCurrentMonth(currentMonth + 1);
+                      }
                     }} style={arrowStyle}>▶</div>
                   </div>
 
@@ -219,16 +276,22 @@ ${currentInterview.transcript || "暂无录音"}
                   </div>
 
                   <div style={daysGridStyle}>
+                    {/* 前面空白占位 */}
                     {Array.from({ length: getFirstDayOfMonth(currentYear, currentMonth) }).map((_, i) => (
                       <div key={`blank-${i}`} style={dayStyle}></div>
                     ))}
+                    {/* 日期 */}
                     {Array.from({ length: getDaysInMonth(currentYear, currentMonth) }, (_, i) => {
                       const day = (i + 1).toString().padStart(2, "0");
                       const monthStr = currentMonth.toString().padStart(2, "0");
                       const date = `${currentYear}-${monthStr}-${day}`;
                       const has = dayHasInterview(date);
                       return (
-                        <div key={date} onClick={() => handleSelectDay(date)} style={has ? dayActiveStyle : dayStyle}>
+                        <div
+                          key={date}
+                          onClick={() => handleSelectDay(date)}
+                          style={has ? dayActiveStyle : dayStyle}
+                        >
                           {i + 1}
                         </div>
                       );
@@ -236,27 +299,50 @@ ${currentInterview.transcript || "暂无录音"}
                   </div>
                 </div>
 
+                {/* 新增面试 */}
                 <div style={addFormCardStyle}>
                   <div style={sectionTitleStyle}>新增面试安排</div>
-                  <select style={inputStyle} value={selectedJob?.id || ""}
-                    onChange={(e) => setSelectedJob(jobs.find(j => j.id === +e.target.value) || null)}>
+                  <select
+                    style={inputStyle}
+                    value={selectedJob?.id || ""}
+                    onChange={(e) => setSelectedJob(jobs.find(j => j.id === +e.target.value) || null)}
+                  >
                     <option value="">请选择岗位</option>
-                    {jobs.map(j => <option key={j.id} value={j.id}>{j.company} - {j.role}</option>)}
+                    {jobs.map(j => (
+                      <option key={j.id} value={j.id}>{j.company} - {j.role}</option>
+                    ))}
                   </select>
 
-                  <input style={inputStyle} type="date" value={interviewDate} onChange={(e) => setInterviewDate(e.target.value)} />
-                  <input style={inputStyle} type="time" value={interviewTime} onChange={(e) => setInterviewTime(e.target.value)} />
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={interviewDate}
+                    onChange={(e) => setInterviewDate(e.target.value)}
+                  />
+                  <input
+                    style={inputStyle}
+                    type="time"
+                    value={interviewTime}
+                    onChange={(e) => setInterviewTime(e.target.value)}
+                  />
 
-                  <select style={inputStyle} value={channel} onChange={(e) => setChannel(e.target.value)}>
+                  <select
+                    style={inputStyle}
+                    value={channel}
+                    onChange={(e) => setChannel(e.target.value)}
+                  >
                     <option>腾讯会议</option>
                     <option>飞书会议</option>
                     <option>线下面试</option>
                     <option>电话面试</option>
                   </select>
 
-                  <button onClick={addInterview} style={submitBtnStyle}>提交面试安排</button>
+                  <button onClick={addInterview} style={submitBtnStyle}>
+                    提交面试安排
+                  </button>
                 </div>
 
+                {/* 面试详情 */}
                 {selectedDay && currentInterview && (
                   <div style={interviewDetailCardStyle}>
                     <div style={sectionTitleStyle}>面试详情</div>
@@ -282,6 +368,7 @@ ${currentInterview.transcript || "暂无录音"}
               </div>
             )}
 
+            {/* 复盘 */}
             {topTab === "复盘" && (
               <div style={reportPageStyle}>
                 <div style={aiBubbleStyle}>{report || "完成录音后生成复盘"}</div>
@@ -290,6 +377,7 @@ ${currentInterview.transcript || "暂无录音"}
           </>
         )}
 
+        {/* 课程 */}
         {bottomTab === "课程" && (
           <div style={coursePageStyle}>
             <div style={courseGridStyle}>
@@ -306,6 +394,7 @@ ${currentInterview.transcript || "暂无录音"}
           </div>
         )}
 
+        {/* 社区 */}
         {bottomTab === "社区" && (
           <div style={communityPageStyle}>
             <div style={communityNavStyle}>
@@ -329,6 +418,7 @@ ${currentInterview.transcript || "暂无录音"}
         {bottomTab === "我的" && <div style={emptyStyle}>个人中心</div>}
       </div>
 
+      {/* 底部导航 */}
       <div style={bottomBarStyle}>
         <div onClick={() => setBottomTab("首页")} style={bottomTab === "首页" ? bottomActiveStyle : bottomItemStyle}>首页</div>
         <div onClick={() => setBottomTab("课程")} style={bottomTab === "课程" ? bottomActiveStyle : bottomItemStyle}>课程</div>
@@ -337,6 +427,7 @@ ${currentInterview.transcript || "暂无录音"}
         <div onClick={() => setBottomTab("我的")} style={bottomTab === "我的" ? bottomActiveStyle : bottomItemStyle}>我的</div>
       </div>
 
+      {/* 弹窗 */}
       {showAddPop && (
         <div style={modalStyle}>
           <div style={modalContentStyle}>
@@ -378,62 +469,419 @@ const appContainer = {
   fontFamily: "system-ui, sans-serif",
 };
 
-const headerStyle = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
-const logoStyle = { fontSize: "16px", fontWeight: 600 };
-const searchStyle = { flex: 1, padding: "8px 14px", borderRadius: "20px", background: "#F3F4F6", border: "none", outline: "none" };
-const topTabBarStyle = { display: "flex", background: "#fff", borderBottom: "1px solid #E5E7EB" };
-const topTabItemStyle = { flex: 1, textAlign: "center", padding: "12px 0", fontSize: "14px", color: "#9CA3AF" };
-const topTabActiveStyle = { flex: 1, textAlign: "center", padding: "12px 0", fontSize: "14px", fontWeight: 600, color: "#3B82F6", borderBottom: "2px solid #3B82F6" };
-const contentStyle = { height: "calc(100% - 190px)", overflowY: "auto", padding: "10px" };
-const listStyle = { display: "flex", flexDirection: "column", gap: "10px" };
-const cardStyle = { background: "#fff", borderRadius: "16px", padding: "16px" };
-const titleStyle = { fontSize: "16px", fontWeight: 600, marginBottom: "4px" };
-const infoStyle = { fontSize: "14px", color: "#4B5563" };
-const locationStyle = { fontSize: "13px", color: "#9CA3AF", marginBottom: "8px" };
-const tagStyle = { fontSize: "12px", color: "#fff", padding: "4px 10px", borderRadius: "12px", border: "none" };
-const emptyStyle = { textAlign: "center", color: "#9CA3AF", padding: "40px 0" };
-const interviewPageStyle = { display: "flex", flexDirection: "column", gap: "12px", paddingBottom: "20px" };
-const calendarCardStyle = { background: "#ffffff", borderRadius: "16px", padding: "16px" };
-const calendarHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" };
-const arrowStyle = { fontSize: "16px", padding: "4px 10px", cursor: "pointer" };
-const monthStyle = { fontSize: "16px", fontWeight: 500 };
-const weekBarStyle = { display: "grid", gridTemplateColumns: "repeat(7, 1fr)" };
-const weekTextStyle = { textAlign: "center", fontSize: "12px", color: "#9CA3AF" };
-const daysGridStyle = { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginTop: "8px" };
-const dayStyle = { textAlign: "center", padding: "8px", fontSize: "14px" };
-const dayActiveStyle = { textAlign: "center", padding: "8px", fontSize: "14px", background: "#DBEAFE", borderRadius: "50%", color: "#3B82F6", fontWeight: 500 };
-const addFormCardStyle = { background: "#fff", borderRadius: "16px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" };
-const sectionTitleStyle = { fontSize: "15px", fontWeight: 600, marginBottom: "4px" };
-const inputStyle = { padding: "12px", border: "1px solid #E5E7EB", borderRadius: "12px", outline: "none" };
-const submitBtnStyle = { background: "#3B82F6", color: "#fff", border: "none", borderRadius: "12px", padding: "12px 0", fontSize: "14px", marginTop: "4px" };
-const interviewDetailCardStyle = { background: "#fff", borderRadius: "16px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" };
-const detailTextStyle = { fontSize: "14px", color: "#374151" };
-const recordBtnStyle = { background: "#4F46E5", color: "#fff", border: "none", borderRadius: "12px", padding: "10px 0", fontSize: "14px" };
-const transcriptCardStyle = { background: "#F9FAFB", borderRadius: "12px", padding: "12px", minHeight: "80px" };
-const subTitleStyle = { fontSize: "13px", color: "#6B7280", marginBottom: "6px" };
-const transcriptTextStyle = { fontSize: "14px", lineHeight: "1.5" };
-const reportBtnStyle = { background: "#10B981", color: "#fff", border: "none", borderRadius: "12px", padding: "10px 0", fontSize: "14px", marginTop: "4px" };
-const reportPageStyle = { padding: "10px" };
-const aiBubbleStyle = { background: "#DBEAFE", borderRadius: "16px", padding: "16px", fontSize: "14px", whiteSpace: "pre-wrap", lineHeight: 1.5 };
-const coursePageStyle = { padding: "15px" };
-const courseGridStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "15px" };
-const courseCardStyle = { background: "#fff", borderRadius: "12px", padding: "16px", textAlign: "center" };
-const courseIconStyle = { fontSize: "24px", marginBottom: "8px" };
-const demoListStyle = { display: "flex", flexDirection: "column", gap: "8px" };
-const demoItemStyle = { background: "#fff", padding: "12px", borderRadius: "8px", fontSize: "13px" };
-const communityPageStyle = { padding: "15px" };
-const communityNavStyle = { display: "flex", alignItems: "center", gap: "20px", marginBottom: "15px" };
-const navActiveStyle = { fontSize: "16px", fontWeight: 600 };
-const navItemStyle = { fontSize: "16px", color: "#9CA3AF" };
-const navIconsStyle = { marginLeft: "auto", display: "flex", gap: "16px" };
-const communityTabsStyle = { display: "flex", justifyContent: "space-around", marginBottom: "15px", fontSize: "13px" };
-const postGridStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" };
-const postCardStyle = { background: "#fff", borderRadius: "12px", padding: "12px" };
-const bottomBarStyle = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #E5E7EB" };
-const bottomItemStyle = { fontSize: "13px", color: "#9CA3AF" };
-const bottomActiveStyle = { fontSize: "13px", color: "#3B82F6", fontWeight: 500 };
-const bottomAddStyle = { width: "50px", height: "50px", borderRadius: "50%", background: "#3B82F6", color: "#fff", fontSize: "24px", display: "flex", alignItems: "center", justifyContent: "center" };
-const modalStyle = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 };
-const modalContentStyle = { width: "320px", background: "#fff", borderRadius: "20px", padding: "20px", display: "flex", flexDirection: "column", gap: "12px", position: "relative" };
-const modalCloseStyle = { position: "absolute", top: "12px", right: "16px", background: "none", border: "none", fontSize: "18px", color: "#9CA3AF" };
-const modalBtnStyle = { background: "#3B82F6", color: "#fff", border: "none", borderRadius: "12px", padding: "12px 0" };
+const headerStyle = {
+  background: "#fff",
+  padding: "15px 20px",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+};
+
+const logoStyle = {
+  fontSize: "16px",
+  fontWeight: 600,
+};
+
+const searchStyle = {
+  flex: 1,
+  padding: "8px 14px",
+  borderRadius: "20px",
+  background: "#F3F4F6",
+  border: "none",
+  outline: "none",
+};
+
+const topTabBarStyle = {
+  display: "flex",
+  background: "#fff",
+  borderBottom: "1px solid #E5E7EB",
+};
+
+const topTabItemStyle = {
+  flex: 1,
+  textAlign: "center",
+  padding: "12px 0",
+  fontSize: "14px",
+  color: "#9CA3AF",
+};
+
+const topTabActiveStyle = {
+  flex: 1,
+  textAlign: "center",
+  padding: "12px 0",
+  fontSize: "14px",
+  fontWeight: 600,
+  color: "#3B82F6",
+  borderBottom: "2px solid #3B82F6",
+};
+
+const contentStyle = {
+  height: "calc(100% - 190px)",
+  overflowY: "auto",
+  padding: "10px",
+};
+
+const listStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+};
+
+const cardStyle = {
+  background: "#fff",
+  borderRadius: "16px",
+  padding: "16px",
+};
+
+const titleStyle = {
+  fontSize: "16px",
+  fontWeight: 600,
+  marginBottom: "4px",
+};
+
+const infoStyle = {
+  fontSize: "14px",
+  color: "#4B5563",
+};
+
+const locationStyle = {
+  fontSize: "13px",
+  color: "#9CA3AF",
+  marginBottom: "8px",
+};
+
+const tagStyle = {
+  fontSize: "12px",
+  color: "#fff",
+  padding: "4px 10px",
+  borderRadius: "12px",
+  border: "none",
+};
+
+const emptyStyle = {
+  textAlign: "center",
+  color: "#9CA3AF",
+  padding: "40px 0",
+};
+
+// 面试
+const interviewPageStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  paddingBottom: "20px",
+};
+
+const calendarCardStyle = {
+  background: "#ffffff",
+  borderRadius: "16px",
+  padding: "16px",
+};
+
+const calendarHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "10px",
+};
+
+const arrowStyle = {
+  fontSize: "16px",
+  padding: "4px 10px",
+  cursor: "pointer",
+};
+
+const monthStyle = {
+  fontSize: "16px",
+  fontWeight: 500,
+};
+
+const weekBarStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+};
+
+const weekTextStyle = {
+  textAlign: "center",
+  fontSize: "12px",
+  color: "#9CA3AF",
+};
+
+const daysGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+  gap: "4px",
+  marginTop: "8px",
+};
+
+const dayStyle = {
+  textAlign: "center",
+  padding: "8px",
+  fontSize: "14px",
+};
+
+const dayActiveStyle = {
+  textAlign: "center",
+  padding: "8px",
+  fontSize: "14px",
+  background: "#DBEAFE",
+  borderRadius: "50%",
+  color: "#3B82F6",
+  fontWeight: 500,
+};
+
+const addFormCardStyle = {
+  background: "#fff",
+  borderRadius: "16px",
+  padding: "16px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+};
+
+const sectionTitleStyle = {
+  fontSize: "15px",
+  fontWeight: 600,
+  marginBottom: "4px",
+};
+
+const inputStyle = {
+  padding: "12px",
+  border: "1px solid #E5E7EB",
+  borderRadius: "12px",
+  outline: "none",
+};
+
+const submitBtnStyle = {
+  background: "#3B82F6",
+  color: "#fff",
+  border: "none",
+  borderRadius: "12px",
+  padding: "12px 0",
+  fontSize: "14px",
+  marginTop: "4px",
+};
+
+const interviewDetailCardStyle = {
+  background: "#fff",
+  borderRadius: "16px",
+  padding: "16px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+};
+
+const detailTextStyle = {
+  fontSize: "14px",
+  color: "#374151",
+};
+
+const recordBtnStyle = {
+  background: "#4F46E5",
+  color: "#fff",
+  border: "none",
+  borderRadius: "12px",
+  padding: "10px 0",
+  fontSize: "14px",
+};
+
+const transcriptCardStyle = {
+  background: "#F9FAFB",
+  borderRadius: "12px",
+  padding: "12px",
+  minHeight: "80px",
+};
+
+const subTitleStyle = {
+  fontSize: "13px",
+  color: "#6B7280",
+  marginBottom: "6px",
+};
+
+const transcriptTextStyle = {
+  fontSize: "14px",
+  lineHeight: "1.5",
+};
+
+const reportBtnStyle = {
+  background: "#10B981",
+  color: "#fff",
+  border: "none",
+  borderRadius: "12px",
+  padding: "10px 0",
+  fontSize: "14px",
+  marginTop: "4px",
+};
+
+const reportPageStyle = {
+  padding: "10px",
+};
+
+const aiBubbleStyle = {
+  background: "#DBEAFE",
+  borderRadius: "16px",
+  padding: "16px",
+  fontSize: "14px",
+  whiteSpace: "pre-wrap",
+  lineHeight: 1.5,
+};
+
+// 课程
+const coursePageStyle = {
+  padding: "15px",
+};
+
+const courseGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "12px",
+  marginBottom: "15px",
+};
+
+const courseCardStyle = {
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "16px",
+  textAlign: "center",
+};
+
+const courseIconStyle = {
+  fontSize: "24px",
+  marginBottom: "8px",
+};
+
+const demoListStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+};
+
+const demoItemStyle = {
+  background: "#fff",
+  padding: "12px",
+  borderRadius: "8px",
+  fontSize: "13px",
+};
+
+// 社区
+const communityPageStyle = {
+  padding: "15px",
+};
+
+const communityNavStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "20px",
+  marginBottom: "15px",
+};
+
+const navActiveStyle = {
+  fontSize: "16px",
+  fontWeight: 600,
+};
+
+const navItemStyle = {
+  fontSize: "16px",
+  color: "#9CA3AF",
+};
+
+const navIconsStyle = {
+  marginLeft: "auto",
+  display: "flex",
+  gap: "16px",
+};
+
+const communityTabsStyle = {
+  display: "flex",
+  justifyContent: "space-around",
+  marginBottom: "15px",
+  fontSize: "13px",
+};
+
+const postGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "12px",
+};
+
+const postCardStyle = {
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "12px",
+};
+
+// 底部
+const bottomBarStyle = {
+  position: "absolute",
+  bottom: 0,
+  width: "100%",
+  height: "70px",
+  background: "#fff",
+  display: "flex",
+  justifyContent: "space-around",
+  alignItems: "center",
+  borderTop: "1px solid #E5E7EB",
+};
+
+const bottomItemStyle = {
+  fontSize: "13px",
+  color: "#9CA3AF",
+};
+
+const bottomActiveStyle = {
+  fontSize: "13px",
+  color: "#3B82F6",
+  fontWeight: 500,
+};
+
+const bottomAddStyle = {
+  width: "50px",
+  height: "50px",
+  borderRadius: "50%",
+  background: "#3B82F6",
+  color: "#fff",
+  fontSize: "24px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+// 弹窗
+const modalStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 999,
+};
+
+const modalContentStyle = {
+  width: "320px",
+  background: "#fff",
+  borderRadius: "20px",
+  padding: "20px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  position: "relative",
+};
+
+const modalCloseStyle = {
+  position: "absolute",
+  top: "12px",
+  right: "16px",
+  background: "none",
+  border: "none",
+  fontSize: "18px",
+  color: "#9CA3AF",
+};
+
+const modalBtnStyle = {
+  background: "#3B82F6",
+  color: "#fff",
+  border: "none",
+  borderRadius: "12px",
+  padding: "12px 0",
+};
