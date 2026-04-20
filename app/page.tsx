@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, CSSProperties } from "react";
 
 type Job = {
   id: number;
@@ -123,7 +123,7 @@ export default function Page() {
       const recognition = new SpeechRecognition();
       recognition.lang = "zh-CN";
       recognition.start();
-      recognition.onresult = (e) => {
+      recognition.onresult = (e: any) => {
         const t = e.results[0][0].transcript;
         const updated = interviews.map(it =>
           it.id === currentInterview.id ? { ...it, transcript: t } : it
@@ -174,7 +174,7 @@ ${currentInterview.transcript || "暂无录音"}
   // 获取当月天数
   const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 
-  // 获取当月1号是周几（0=周日，1=周一...6=周六）
+  // 获取当月1号是周几
   const getFirstDayOfMonth = (y: number, m: number) => {
     return new Date(y, m - 1, 1).getDay();
   };
@@ -200,7 +200,6 @@ ${currentInterview.transcript || "暂无录音"}
         <input placeholder="搜索公司/岗位" style={searchStyle} />
       </div>
 
-      {/* 只在【首页】显示顶部标签：岗位/面试/复盘 */}
       {bottomTab === "首页" && (
         <div style={topTabBarStyle}>
           <div onClick={() => setTopTab("岗位")}
@@ -222,7 +221,6 @@ ${currentInterview.transcript || "暂无录音"}
       <div style={contentStyle}>
         {bottomTab === "首页" && (
           <>
-            {/* 岗位 */}
             {topTab === "岗位" && (
               <div style={listStyle}>
                 {jobs.length === 0 && <div style={emptyStyle}>暂无岗位，点击 + 添加</div>}
@@ -245,16 +243,14 @@ ${currentInterview.transcript || "暂无录音"}
               </div>
             )}
 
-            {/* 面试页面（2026年真实日历） */}
             {topTab === "面试" && (
               <div style={interviewPageStyle}>
                 <div style={calendarCardStyle}>
-                  {/* 月份切换 */}
                   <div style={calendarHeaderStyle}>
                     <div onClick={() => {
                       if (currentMonth === 1) {
                         setCurrentMonth(12);
-                        setCurrentYear(2025);
+                        setCurrentYear(currentYear - 1);
                       } else {
                         setCurrentMonth(currentMonth - 1);
                       }
@@ -265,7 +261,7 @@ ${currentInterview.transcript || "暂无录音"}
                     <div onClick={() => {
                       if (currentMonth === 12) {
                         setCurrentMonth(1);
-                        setCurrentYear(2027);
+                        setCurrentYear(currentYear + 1);
                       } else {
                         setCurrentMonth(currentMonth + 1);
                       }
@@ -279,11 +275,9 @@ ${currentInterview.transcript || "暂无录音"}
                   </div>
 
                   <div style={daysGridStyle}>
-                    {/* 前面空白占位 */}
                     {Array.from({ length: getFirstDayOfMonth(currentYear, currentMonth) }).map((_, i) => (
                       <div key={`blank-${i}`} style={dayStyle}></div>
                     ))}
-                    {/* 日期 */}
                     {Array.from({ length: getDaysInMonth(currentYear, currentMonth) }, (_, i) => {
                       const day = (i + 1).toString().padStart(2, "0");
                       const monthStr = currentMonth.toString().padStart(2, "0");
@@ -302,7 +296,6 @@ ${currentInterview.transcript || "暂无录音"}
                   </div>
                 </div>
 
-                {/* 新增面试 */}
                 <div style={addFormCardStyle}>
                   <div style={sectionTitleStyle}>新增面试安排</div>
                   <select
@@ -345,7 +338,6 @@ ${currentInterview.transcript || "暂无录音"}
                   </button>
                 </div>
 
-                {/* 面试详情 */}
                 {selectedDay && currentInterview && (
                   <div style={interviewDetailCardStyle}>
                     <div style={sectionTitleStyle}>面试详情</div>
@@ -371,7 +363,6 @@ ${currentInterview.transcript || "暂无录音"}
               </div>
             )}
 
-            {/* 复盘 */}
             {topTab === "复盘" && (
               <div style={reportPageStyle}>
                 <div style={aiBubbleStyle}>{report || "完成录音后生成复盘"}</div>
@@ -380,7 +371,6 @@ ${currentInterview.transcript || "暂无录音"}
           </>
         )}
 
-        {/* 课程 */}
         {bottomTab === "课程" && (
           <div style={coursePageStyle}>
             <div style={courseGridStyle}>
@@ -397,7 +387,6 @@ ${currentInterview.transcript || "暂无录音"}
           </div>
         )}
 
-        {/* 社区 */}
         {bottomTab === "社区" && (
           <div style={communityPageStyle}>
             <div style={communityNavStyle}>
@@ -421,7 +410,6 @@ ${currentInterview.transcript || "暂无录音"}
         {bottomTab === "我的" && <div style={emptyStyle}>个人中心</div>}
       </div>
 
-      {/* 底部导航 */}
       <div style={bottomBarStyle}>
         <div onClick={() => setBottomTab("首页")} style={bottomTab === "首页" ? bottomActiveStyle : bottomItemStyle}>首页</div>
         <div onClick={() => setBottomTab("课程")} style={bottomTab === "课程" ? bottomActiveStyle : bottomItemStyle}>课程</div>
@@ -430,7 +418,6 @@ ${currentInterview.transcript || "暂无录音"}
         <div onClick={() => setBottomTab("我的")} style={bottomTab === "我的" ? bottomActiveStyle : bottomItemStyle}>我的</div>
       </div>
 
-      {/* 弹窗 */}
       {showAddPop && (
         <div style={modalStyle}>
           <div style={modalContentStyle}>
@@ -460,8 +447,8 @@ ${currentInterview.transcript || "暂无录音"}
   );
 }
 
-// ==================== 样式 ====================
-const appContainer = {
+// ==================== 样式 (修复类型错误) ====================
+const appContainer: CSSProperties = {
   width: "390px",
   height: "844px",
   margin: "20px auto",
@@ -472,7 +459,7 @@ const appContainer = {
   fontFamily: "system-ui, sans-serif",
 };
 
-const headerStyle = {
+const headerStyle: CSSProperties = {
   background: "#fff",
   padding: "15px 20px",
   display: "flex",
@@ -480,12 +467,12 @@ const headerStyle = {
   gap: "10px",
 };
 
-const logoStyle = {
+const logoStyle: CSSProperties = {
   fontSize: "16px",
   fontWeight: 600,
 };
 
-const searchStyle = {
+const searchStyle: CSSProperties = {
   flex: 1,
   padding: "8px 14px",
   borderRadius: "20px",
@@ -494,13 +481,13 @@ const searchStyle = {
   outline: "none",
 };
 
-const topTabBarStyle = {
+const topTabBarStyle: CSSProperties = {
   display: "flex",
   background: "#fff",
   borderBottom: "1px solid #E5E7EB",
 };
 
-const topTabItemStyle = {
+const topTabItemStyle: CSSProperties = {
   flex: 1,
   textAlign: "center",
   padding: "12px 0",
@@ -508,7 +495,7 @@ const topTabItemStyle = {
   color: "#9CA3AF",
 };
 
-const topTabActiveStyle = {
+const topTabActiveStyle: CSSProperties = {
   flex: 1,
   textAlign: "center",
   padding: "12px 0",
@@ -518,42 +505,42 @@ const topTabActiveStyle = {
   borderBottom: "2px solid #3B82F6",
 };
 
-const contentStyle = {
+const contentStyle: CSSProperties = {
   height: "calc(100% - 190px)",
   overflowY: "auto",
   padding: "10px",
 };
 
-const listStyle = {
+const listStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "10px",
 };
 
-const cardStyle = {
+const cardStyle: CSSProperties = {
   background: "#fff",
   borderRadius: "16px",
   padding: "16px",
 };
 
-const titleStyle = {
+const titleStyle: CSSProperties = {
   fontSize: "16px",
   fontWeight: 600,
   marginBottom: "4px",
 };
 
-const infoStyle = {
+const infoStyle: CSSProperties = {
   fontSize: "14px",
   color: "#4B5563",
 };
 
-const locationStyle = {
+const locationStyle: CSSProperties = {
   fontSize: "13px",
   color: "#9CA3AF",
   marginBottom: "8px",
 };
 
-const tagStyle = {
+const tagStyle: CSSProperties = {
   fontSize: "12px",
   color: "#fff",
   padding: "4px 10px",
@@ -561,69 +548,68 @@ const tagStyle = {
   border: "none",
 };
 
-const emptyStyle = {
+const emptyStyle: CSSProperties = {
   textAlign: "center",
   color: "#9CA3AF",
   padding: "40px 0",
 };
 
-// 面试
-const interviewPageStyle = {
+const interviewPageStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "12px",
   paddingBottom: "20px",
 };
 
-const calendarCardStyle = {
+const calendarCardStyle: CSSProperties = {
   background: "#ffffff",
   borderRadius: "16px",
   padding: "16px",
 };
 
-const calendarHeaderStyle = {
+const calendarHeaderStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   marginBottom: "10px",
 };
 
-const arrowStyle = {
+const arrowStyle: CSSProperties = {
   fontSize: "16px",
   padding: "4px 10px",
   cursor: "pointer",
 };
 
-const monthStyle = {
+const monthStyle: CSSProperties = {
   fontSize: "16px",
   fontWeight: 500,
 };
 
-const weekBarStyle = {
+const weekBarStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(7, 1fr)",
 };
 
-const weekTextStyle = {
+const weekTextStyle: CSSProperties = {
   textAlign: "center",
   fontSize: "12px",
   color: "#9CA3AF",
 };
 
-const daysGridStyle = {
+const daysGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(7, 1fr)",
   gap: "4px",
   marginTop: "8px",
 };
 
-const dayStyle = {
+const dayStyle: CSSProperties = {
   textAlign: "center",
   padding: "8px",
   fontSize: "14px",
 };
 
-const dayActiveStyle = {
+const dayActiveStyle: CSSProperties = {
   textAlign: "center",
   padding: "8px",
   fontSize: "14px",
@@ -633,7 +619,7 @@ const dayActiveStyle = {
   fontWeight: 500,
 };
 
-const addFormCardStyle = {
+const addFormCardStyle: CSSProperties = {
   background: "#fff",
   borderRadius: "16px",
   padding: "16px",
@@ -642,20 +628,20 @@ const addFormCardStyle = {
   gap: "10px",
 };
 
-const sectionTitleStyle = {
+const sectionTitleStyle: CSSProperties = {
   fontSize: "15px",
   fontWeight: 600,
   marginBottom: "4px",
 };
 
-const inputStyle = {
+const inputStyle: CSSProperties = {
   padding: "12px",
   border: "1px solid #E5E7EB",
   borderRadius: "12px",
   outline: "none",
 };
 
-const submitBtnStyle = {
+const submitBtnStyle: CSSProperties = {
   background: "#3B82F6",
   color: "#fff",
   border: "none",
@@ -665,7 +651,7 @@ const submitBtnStyle = {
   marginTop: "4px",
 };
 
-const interviewDetailCardStyle = {
+const interviewDetailCardStyle: CSSProperties = {
   background: "#fff",
   borderRadius: "16px",
   padding: "16px",
@@ -674,12 +660,12 @@ const interviewDetailCardStyle = {
   gap: "10px",
 };
 
-const detailTextStyle = {
+const detailTextStyle: CSSProperties = {
   fontSize: "14px",
   color: "#374151",
 };
 
-const recordBtnStyle = {
+const recordBtnStyle: CSSProperties = {
   background: "#4F46E5",
   color: "#fff",
   border: "none",
@@ -688,25 +674,25 @@ const recordBtnStyle = {
   fontSize: "14px",
 };
 
-const transcriptCardStyle = {
+const transcriptCardStyle: CSSProperties = {
   background: "#F9FAFB",
   borderRadius: "12px",
   padding: "12px",
   minHeight: "80px",
 };
 
-const subTitleStyle = {
+const subTitleStyle: CSSProperties = {
   fontSize: "13px",
   color: "#6B7280",
   marginBottom: "6px",
 };
 
-const transcriptTextStyle = {
+const transcriptTextStyle: CSSProperties = {
   fontSize: "14px",
   lineHeight: "1.5",
 };
 
-const reportBtnStyle = {
+const reportBtnStyle: CSSProperties = {
   background: "#10B981",
   color: "#fff",
   border: "none",
@@ -716,11 +702,11 @@ const reportBtnStyle = {
   marginTop: "4px",
 };
 
-const reportPageStyle = {
+const reportPageStyle: CSSProperties = {
   padding: "10px",
 };
 
-const aiBubbleStyle = {
+const aiBubbleStyle: CSSProperties = {
   background: "#DBEAFE",
   borderRadius: "16px",
   padding: "16px",
@@ -729,92 +715,89 @@ const aiBubbleStyle = {
   lineHeight: 1.5,
 };
 
-// 课程
-const coursePageStyle = {
+const coursePageStyle: CSSProperties = {
   padding: "15px",
 };
 
-const courseGridStyle = {
+const courseGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: "12px",
   marginBottom: "15px",
 };
 
-const courseCardStyle = {
+const courseCardStyle: CSSProperties = {
   background: "#fff",
   borderRadius: "12px",
   padding: "16px",
   textAlign: "center",
 };
 
-const courseIconStyle = {
+const courseIconStyle: CSSProperties = {
   fontSize: "24px",
   marginBottom: "8px",
 };
 
-const demoListStyle = {
+const demoListStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "8px",
 };
 
-const demoItemStyle = {
+const demoItemStyle: CSSProperties = {
   background: "#fff",
   padding: "12px",
   borderRadius: "8px",
   fontSize: "13px",
 };
 
-// 社区
-const communityPageStyle = {
+const communityPageStyle: CSSProperties = {
   padding: "15px",
 };
 
-const communityNavStyle = {
+const communityNavStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "20px",
   marginBottom: "15px",
 };
 
-const navActiveStyle = {
+const navActiveStyle: CSSProperties = {
   fontSize: "16px",
   fontWeight: 600,
 };
 
-const navItemStyle = {
+const navItemStyle: CSSProperties = {
   fontSize: "16px",
   color: "#9CA3AF",
 };
 
-const navIconsStyle = {
+const navIconsStyle: CSSProperties = {
   marginLeft: "auto",
   display: "flex",
   gap: "16px",
 };
 
-const communityTabsStyle = {
+const communityTabsStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-around",
   marginBottom: "15px",
   fontSize: "13px",
 };
 
-const postGridStyle = {
+const postGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: "12px",
 };
 
-const postCardStyle = {
+const postCardStyle: CSSProperties = {
   background: "#fff",
   borderRadius: "12px",
   padding: "12px",
 };
 
-// 底部
-const bottomBarStyle = {
+const bottomBarStyle: CSSProperties = {
   position: "absolute",
   bottom: 0,
   width: "100%",
@@ -826,18 +809,18 @@ const bottomBarStyle = {
   borderTop: "1px solid #E5E7EB",
 };
 
-const bottomItemStyle = {
+const bottomItemStyle: CSSProperties = {
   fontSize: "13px",
   color: "#9CA3AF",
 };
 
-const bottomActiveStyle = {
+const bottomActiveStyle: CSSProperties = {
   fontSize: "13px",
   color: "#3B82F6",
   fontWeight: 500,
 };
 
-const bottomAddStyle = {
+const bottomAddStyle: CSSProperties = {
   width: "50px",
   height: "50px",
   borderRadius: "50%",
@@ -849,8 +832,7 @@ const bottomAddStyle = {
   justifyContent: "center",
 };
 
-// 弹窗
-const modalStyle = {
+const modalStyle: CSSProperties = {
   position: "fixed",
   inset: 0,
   background: "rgba(0,0,0,0.4)",
@@ -860,7 +842,7 @@ const modalStyle = {
   zIndex: 999,
 };
 
-const modalContentStyle = {
+const modalContentStyle: CSSProperties = {
   width: "320px",
   background: "#fff",
   borderRadius: "20px",
@@ -871,7 +853,7 @@ const modalContentStyle = {
   position: "relative",
 };
 
-const modalCloseStyle = {
+const modalCloseStyle: CSSProperties = {
   position: "absolute",
   top: "12px",
   right: "16px",
@@ -881,7 +863,7 @@ const modalCloseStyle = {
   color: "#9CA3AF",
 };
 
-const modalBtnStyle = {
+const modalBtnStyle: CSSProperties = {
   background: "#3B82F6",
   color: "#fff",
   border: "none",
