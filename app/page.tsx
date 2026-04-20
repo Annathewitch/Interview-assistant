@@ -13,7 +13,7 @@ type Job = {
 };
 
 type Interview = {
-  id: number;
+  id: number; // 必须有 ID
   jobId: number;
   date: string;
   time: string;
@@ -71,14 +71,21 @@ export default function Page() {
     setCompany(""); setRole(""); setSalary(""); setLocation(""); setStatus("刚投递");
   };
 
+  // 修复后的添加面试逻辑
   const addInterview = () => {
     if (!selectedJob || !interviewDate) return;
-    const newIt: Interview = { jobId: selectedJob.id, date: interviewDate, time: interviewTime, channel };
+    const newIt: Interview = { 
+      id: Date.now(), // 修复编译错误：补全 ID
+      jobId: selectedJob.id, 
+      date: interviewDate, 
+      time: interviewTime, 
+      channel 
+    };
     saveInterviews([newIt, ...interviews]);
     setInterviewDate(""); setInterviewTime("");
   };
 
-  // 面试日历助手函数
+  // 日历助手函数
   const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
   const getFirstDayOfMonth = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
   const dayHasInterview = (date: string) => interviews.some(it => it.date === date);
@@ -91,14 +98,14 @@ export default function Page() {
   const startRecord = () => {
     setRecording(true);
     setTimeout(() => {
-      const updated = interviews.map(it => it.date === selectedDay ? { ...it, transcript: "面试官：请先做下自我介绍。\n候选人：好的，我是一名具有3年经验的前端开发..." } : it);
+      const updated = interviews.map(it => it.date === selectedDay ? { ...it, transcript: "面试官：请先做下自我介绍。\n候选人：好的，我是一名具有3年经验的前端开发，熟悉 React 和 Next.js..." } : it);
       saveInterviews(updated);
       setRecording(false);
     }, 2000);
   };
 
   const goToReport = () => {
-    setReport("【AI复盘报告】\n1. 亮点：项目架构描述清晰。\n2. 建议：在手写代码环节对闭包的理解可以更深入。\n3. 预测：通过率 85%");
+    setReport("【AI复盘报告 - 2026版】\n1. 表现评估：逻辑清晰，技术基础扎实。\n2. 改进点：在谈到分布式架构时，细节支撑略显不足。\n3. 下一步建议：重点复习 CAP 理论及其实际应用场景。");
     setTopTab("复盘");
   };
 
@@ -120,9 +127,8 @@ export default function Page() {
               ))}
             </div>
 
-            {/* 用户指引 (浮动，不遮挡) */}
             {jobs.length === 0 && (
-              <div style={guideInPageStyle}>💡 提示：点击下方中间的“+”按钮，开始记录你的第一份投递吧！</div>
+              <div style={guideInPageStyle}>💡 操作指引：点击下方“+”记录新岗位，在岗位卡片上点击“状态”可直接排期面试。</div>
             )}
 
             {topTab === "岗位" && (
@@ -134,9 +140,9 @@ export default function Page() {
                     <div style={{fontSize:'12px', color:'#999'}}>{job.location}</div>
                     <button 
                       onClick={() => { setTopTab("面试"); setSelectedJob(job); }}
-                      style={{ ...tagStyle, backgroundColor: "#3B82F6", cursor:'pointer' }}
+                      style={{ ...tagStyle, backgroundColor: "#3B82F6", cursor:'pointer', border:'none' }}
                     >
-                      {job.status} (点击安排面试)
+                      {job.status} (点击排期)
                     </button>
                   </div>
                 ))}
@@ -145,6 +151,7 @@ export default function Page() {
 
             {topTab === "面试" && (
               <div style={interviewPageStyle}>
+                {/* 2026年日历逻辑 */}
                 <div style={calendarCardStyle}>
                   <div style={calendarHeaderStyle}>
                     <div onClick={() => { if (currentMonth === 1) { setCurrentMonth(12); setCurrentYear(currentYear-1); } else setCurrentMonth(currentMonth-1); }} style={arrowStyle}>◀</div>
@@ -165,6 +172,7 @@ export default function Page() {
                   </div>
                 </div>
 
+                {/* 新增面试安排 */}
                 <div style={addFormCardStyle}>
                   <div style={sectionTitleStyle}>新增面试安排</div>
                   <select style={inputStyle} value={selectedJob?.id || ""} onChange={(e) => setSelectedJob(jobs.find(j => j.id === +e.target.value) || null)}>
@@ -179,14 +187,15 @@ export default function Page() {
                   <button onClick={addInterview} style={submitBtnStyle}>提交面试安排</button>
                 </div>
 
+                {/* 面试详情与录音 */}
                 {selectedDay && currentInterview && (
                   <div style={interviewDetailCardStyle}>
                     <div style={sectionTitleStyle}>面试详情</div>
                     <div style={detailTextStyle}>公司：{jobs.find(j => j.id === currentInterview.jobId)?.company}</div>
-                    <div style={detailTextStyle}>方式：{currentInterview.channel} ({currentInterview.time})</div>
+                    <div style={detailTextStyle}>时间：{currentInterview.date} {currentInterview.time}</div>
                     <button onClick={startRecord} style={recordBtnStyle} disabled={recording}>{recording ? "🔴 录音中..." : "🎙️ 开始录音"}</button>
                     <div style={transcriptCardStyle}>
-                      <div style={subTitleStyle}>实时转写内容：</div>
+                      <div style={subTitleStyle}>转写预览：</div>
                       <div style={transcriptTextStyle}>{currentInterview.transcript || "等待录音..."}</div>
                     </div>
                     {currentInterview.transcript && <button onClick={goToReport} style={reportBtnStyle}>一键AI复盘</button>}
@@ -197,9 +206,13 @@ export default function Page() {
 
             {topTab === "复盘" && (
               <div style={reportPageStyle}>
-                <div style={sectionTitleStyle}>AI 深度复盘报告</div>
-                <div style={aiBubbleStyle}>{report || "请先在面试页完成录音并点击AI复盘"}</div>
-                {report && <div style={{...cardStyle, borderLeft:'4px solid #10B981'}}><b>知识点强化：</b>建议复习 React Fiber 架构及 Diff 算法实现。</div>}
+                <div style={aiBubbleStyle}>{report || "完成面试录音后，点击“一键AI复盘”查看详细评估报告。"}</div>
+                {report && (
+                   <div style={{marginTop:'20px'}}>
+                      <div style={sectionTitleStyle}>Demo：推荐练习题</div>
+                      <div style={cardStyle}>根据本次面试表现，建议练习：<b>“LRU 缓存机制实现”</b></div>
+                   </div>
+                )}
               </div>
             )}
           </>
@@ -218,26 +231,26 @@ export default function Page() {
             </div>
 
             <div style={demoListStyle}>
-              <div style={sectionTitleStyle}>最新练习推送</div>
+              <div style={sectionTitleStyle}>2026 春招实时练习</div>
               {[
-                "2026年快手春招前端笔试（最新）",
-                "大厂高频：LRU 算法专题练习",
-                "产品经理：2026 字节跳动模拟面试题",
-                "算法必刷：动态规划 30 题",
-                "往年真题：腾讯 2025 校招笔试全辑"
+                "2026年快手春招笔试真题（前端A卷）",
+                "2026年腾讯暑期实习：产品综合素质测评",
+                "字节跳动：后端研发 2026 第一场笔试模拟",
+                "阿里巴巴：2026 校园招聘技术面经精选",
+                "专项：计算机网络高频 50 题挑战"
               ].map(item => (
-                <div key={item} style={demoItemStyle}>🔥 {item} <span style={{float:'right', color:'#999'}}>&gt;</span></div>
+                <div key={item} style={demoItemStyle}>🔥 {item}</div>
               ))}
             </div>
 
             {codingDemo && (
               <div style={editorOverlay}>
                 <div style={problemFloatingCard}>
-                  <div style={{display:'flex', justifyContent:'space-between'}}><b>LeetCode：反转链表</b><span onClick={() => setCodingDemo(false)}>✕</span></div>
-                  <p style={{fontSize:'12px', marginTop:'5px'}}>给你单链表的头节点 head，请你反转链表，并返回反转后的链表。</p>
+                  <div style={{display:'flex', justifyContent:'space-between'}}><b>题目：两数之和</b><span onClick={() => setCodingDemo(false)}>✕</span></div>
+                  <p style={{fontSize:'12px', marginTop:'5px'}}>2026 字节跳动高频题：给定一个整数数组 nums 和目标值 target...</p>
                 </div>
-                <textarea style={editorArea} defaultValue="/**\n * Definition for singly-linked list.\n * function ListNode(val, next) {}\n */\nvar reverseList = function(head) {\n    \n};" />
-                <button onClick={() => setCodingDemo(false)} style={modalBtnStyle}>运行测试</button>
+                <textarea style={editorArea} defaultValue="/**\n * @param {number[]} nums\n * @param {number} target\n */\nvar twoSum = function(nums, target) {\n    \n};" />
+                <button onClick={() => setCodingDemo(false)} style={modalBtnStyle}>保存并退出</button>
               </div>
             )}
           </div>
@@ -246,20 +259,17 @@ export default function Page() {
         {/* 社区页面 */}
         {bottomTab === "社区" && (
           <div style={listStyle}>
-            <div style={sectionTitleStyle}>广场热门讨论</div>
+            <div style={sectionTitleStyle}>2026 求职社区广场</div>
             {[
-              {u:"前端小王", t:"2026届快手春招，大家都收到面试了吗？", c:"投了一周了没动静，慌的一批..."},
-              {u:"面试官-阿杰", t:"现在的候选人怎么连基础的闭包都说不清楚？", c:"面试了几个人，感觉今年竞争真的很激烈。"},
-              {u:"Offer收割机", t:"拿到了美团和拼多多的Offer，怎么选？", c:"美团在北京，PDD在上海，薪资差不离..."},
-              {u:"求职小透明", t:"求助！线下面试穿正装还是休闲装？", c:"第一次去这种公司面试，有点紧张。"}
-            ].map((post, index) => (
-              <div key={index} style={cardStyle}>
-                <div style={{fontSize:'12px', color:'#3B82F6', marginBottom:'5px'}}>@{post.u}</div>
-                <div style={titleStyle}>{post.t}</div>
-                <div style={{fontSize:'13px', color:'#666', marginTop:'5px'}}>{post.c}</div>
-                <div style={{display:'flex', gap:'15px', marginTop:'10px', fontSize:'11px', color:'#999'}}>
-                  <span>💬 12 评论</span><span>👍 45 赞</span>
-                </div>
+              {u:"职场萌新", t:"2026年春招感觉比去年还卷，大家投了几家了？", c:"目前投了20家，只有3个面试，坐标上海。"},
+              {u:"Offer收割机", t:"美团2026届校招面经分享", c:"一共三轮技术面+一轮HR面，主要考察工程能力。"},
+              {u:"面试官阿强", t:"给2026届同学的几个建议", c:"现在更看重基础，不要只盯着框架看。"},
+              {u:"快手打工人", t:"快手春招内推直通车，欢迎私信！", c:"部门直招，HC多多，欢迎各位优秀学子。"}
+            ].map((post, i) => (
+              <div key={i} style={cardStyle}>
+                <div style={{fontSize:'12px', color:'#3B82F6'}}>@{post.u}</div>
+                <div style={{fontWeight:'bold', margin:'5px 0'}}>{post.t}</div>
+                <div style={{fontSize:'13px', color:'#666'}}>{post.c}</div>
               </div>
             ))}
           </div>
@@ -293,7 +303,6 @@ export default function Page() {
         )}
       </div>
 
-      {/* 底部导航 */}
       <div style={bottomBarStyle}>
         {["首页", "课程", "+", "社区", "我的"].map((tab) => (
           tab === "+" ? 
@@ -302,27 +311,26 @@ export default function Page() {
         ))}
       </div>
 
-      {/* 弹窗 */}
       {showJobForm && (
         <div style={modalStyle}>
           <div style={modalContentStyle}>
             <button style={modalCloseStyle} onClick={() => setShowJobForm(false)}>✕</button>
-            <h3>新建岗位记录</h3>
+            <h3 style={{margin:0}}>新建投递岗位</h3>
             <input style={inputStyle} placeholder="公司名称" value={company} onChange={e=>setCompany(e.target.value)} />
-            <input style={inputStyle} placeholder="投递岗位" value={role} onChange={e=>setRole(e.target.value)} />
-            <input style={inputStyle} placeholder="薪资 (例: 15-20k)" value={salary} onChange={e=>setSalary(e.target.value)} />
-            <input style={inputStyle} placeholder="工作城市 (例: 上海)" value={location} onChange={e=>setLocation(e.target.value)} />
+            <input style={inputStyle} placeholder="岗位名称" value={role} onChange={e=>setRole(e.target.value)} />
+            <input style={inputStyle} placeholder="薪资 (例如: 20-30k)" value={salary} onChange={e=>setSalary(e.target.value)} />
+            <input style={inputStyle} placeholder="Base 地 (例如: 北京)" value={location} onChange={e=>setLocation(e.target.value)} />
             <select style={inputStyle} value={status} onChange={e=>setStatus(e.target.value)}>
               {STATUS.map(s=><option key={s}>{s}</option>)}
             </select>
-            <button onClick={addJob} style={modalBtnStyle}>确认保存</button>
+            <button onClick={addJob} style={modalBtnStyle}>确认添加</button>
           </div>
         </div>
       )}
 
       {showAddPop && (
         <div style={modalStyle} onClick={() => setShowAddPop(false)}>
-          <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
+          <div style={modalContentStyle} onClick={e=>e.stopPropagation()}>
             <button onClick={() => { setShowJobForm(true); setShowAddPop(false); }} style={modalBtnStyle}>记录新岗位</button>
             <button onClick={() => { setBottomTab("首页"); setTopTab("面试"); setShowAddPop(false); }} style={modalBtnStyle}>安排新面试</button>
           </div>
@@ -332,7 +340,7 @@ export default function Page() {
   );
 }
 
-// --- 样式定义 ---
+// --- 样式对象 (与之前保持一致) ---
 const appContainer: CSSProperties = { width: "390px", height: "844px", margin: "20px auto", background: "#F9FAFB", borderRadius: "30px", overflow: "hidden", position: "relative", border:'8px solid #333' };
 const headerStyle: CSSProperties = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
 const logoStyle: CSSProperties = { fontSize: "16px", fontWeight: "bold" };
@@ -346,10 +354,7 @@ const cardStyle: CSSProperties = { background: "#fff", borderRadius: "12px", pad
 const titleStyle: CSSProperties = { fontSize: "16px", fontWeight: "bold" };
 const infoStyle: CSSProperties = { fontSize: "13px", color: "#666", marginTop:'4px' };
 const tagStyle: CSSProperties = { fontSize: "11px", color: "#fff", padding: "3px 8px", borderRadius: "8px", border: "none", marginTop: "8px" };
-const emptyStyle: CSSProperties = { textAlign: "center", color: "#999", marginTop: "100px", padding:'0 20px' };
 const sectionTitleStyle: CSSProperties = { fontSize: "15px", fontWeight: "bold", margin: "10px 0" };
-
-// 面试页面样式
 const interviewPageStyle: CSSProperties = { padding: '15px' };
 const calendarCardStyle: CSSProperties = { background: '#fff', borderRadius: '15px', padding: '15px', marginBottom: '15px', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' };
 const calendarHeaderStyle: CSSProperties = { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' };
@@ -370,23 +375,17 @@ const transcriptCardStyle: CSSProperties = { background:'#F9FAFB', padding:'10px
 const subTitleStyle: CSSProperties = { fontSize:'12px', color:'#999', marginBottom:'5px' };
 const transcriptTextStyle: CSSProperties = { fontSize:'13px', lineHeight:'1.6', color:'#444' };
 const reportBtnStyle: CSSProperties = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'8px', marginTop:'10px', fontWeight:'bold' };
-
-// 课程与Demo
 const coursePageStyle: CSSProperties = { padding:'15px' };
 const courseGridStyle: CSSProperties = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
 const courseCardStyle: CSSProperties = { background:'#fff', borderRadius:'15px', padding:'20px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.05)' };
 const courseIconStyle: CSSProperties = { fontSize:'28px', marginBottom:'8px' };
 const demoListStyle: CSSProperties = { marginTop:'20px' };
 const demoItemStyle: CSSProperties = { background:'#fff', padding:'15px', borderRadius:'12px', marginBottom:'8px', border:'1px solid #eee', fontSize:'13px' };
-
-// 复盘与编辑器
 const reportPageStyle: CSSProperties = { padding:'20px' };
 const aiBubbleStyle: CSSProperties = { background:'#3B82F6', color:'#fff', padding:'15px', borderRadius:'15px 15px 15px 0', fontSize:'14px', lineHeight:'1.6', whiteSpace:'pre-wrap' };
 const editorOverlay: CSSProperties = { position:'absolute', inset:0, background:'#1e1e1e', color:'#fff', zIndex:100, padding:'20px', display:'flex', flexDirection:'column' };
 const problemFloatingCard: CSSProperties = { background:'#333', padding:'15px', borderRadius:'12px', marginBottom:'15px' };
 const editorArea: CSSProperties = { flex:1, background:'#252526', color:'#d4d4d4', padding:'15px', fontFamily:'monospace', border:'none', outline:'none', borderRadius:'12px', lineHeight:1.6 };
-
-// 其他通用
 const profilePageStyle: CSSProperties = { background: "#fff", height: "100%" };
 const profileHeaderLight: CSSProperties = { padding: "30px 20px 10px" };
 const userInfoCard: CSSProperties = { display: "flex", alignItems: "center" };
