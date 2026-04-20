@@ -67,7 +67,9 @@ export default function Page() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [realTimeTranscript, setRealTimeTranscript] = useState("");
 
+  // 新增：编程Demo状态
   const [codingDemo, setCodingDemo] = useState(false);
+  // 新增：课程页面标签状态
   const [courseTab, setCourseTab] = useState<'推荐' | '热门' | '学习' | '已购'>('推荐');
 
   // 本地存储
