@@ -117,7 +117,10 @@ export default function Page() {
     if (!currentInterview) return;
     setRecording(true);
     try {
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      const SpeechRecognition = 
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
       recognition.lang = "zh-CN";
       recognition.start();
       recognition.onresult = (e) => {
