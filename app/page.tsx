@@ -67,6 +67,8 @@ export default function Page() {
 
   // 新增：编程Demo状态
   const [codingDemo, setCodingDemo] = useState(false);
+  // 新增：课程页面标签状态
+  const [courseTab, setCourseTab] = useState<'推荐' | '热门' | '学习' | '已购'>('推荐');
 
   // 本地存储
   useEffect(() => {
@@ -188,7 +190,7 @@ export default function Page() {
           <>
             {topTab === "岗位" && (
               <div style={listStyle}>
-                {jobs.length === 0 && <div style={emptyStyle}>暂无岗位，点击下方“+”添加</div>}
+                {jobs.length === 0 && <div style={emptyStyle}>暂无岗位，点击下方"+"添加</div>}
                 {jobs.map(job => (
                   <div key={job.id} style={cardStyle}>
                     <div style={titleStyle}>{job.role}</div>
@@ -243,7 +245,7 @@ export default function Page() {
           </>
         )}
 
-        {/* --- 补充部分：课程页面 --- */}
+        {/* --- 修改部分：课程页面（添加广告banner和导航栏）--- */}
         {bottomTab === "课程" && (
           <div style={coursePageStyle}>
             <div style={courseGridStyle}>
@@ -255,17 +257,118 @@ export default function Page() {
               </div>
             </div>
 
-            <div style={demoListStyle}>
-              <div style={sectionTitleStyle}>2026 春招实时练习</div>
-              {[
-                "2026年快手春招笔试真题（前端A卷）",
-                "2026年腾讯暑期实习：产品综合素质测评",
-                "字节跳动：后端研发 2026 第一场笔试模拟",
-                "阿里巴巴：2026 校园招聘技术面经精选",
-                "专项：计算机网络高频 50 题挑战"
-              ].map(item => (
-                <div key={item} style={demoItemStyle}>🔥 {item}</div>
+            {/* 广告banner */}
+            <div style={adBannerStyle}>
+              <div style={adBannerContent}>
+                <div style={adBannerTitle}>🚀 限时特惠！面试突击班</div>
+                <div style={adBannerSubtitle}>2026春招冲刺 | 名企导师1v1指导</div>
+                <div style={adBannerPrice}>原价¥1999 <span style={{color:'#DC2626', fontSize:'18px', fontWeight:'bold'}}>现价¥999</span></div>
+                <div style={adBannerButton}>立即抢购</div>
+              </div>
+            </div>
+
+            {/* 导航栏 */}
+            <div style={courseNavStyle}>
+              {(['推荐', '热门', '学习', '已购'] as const).map(tab => (
+                <div
+                  key={tab}
+                  onClick={() => setCourseTab(tab)}
+                  style={courseTab === tab ? courseNavActiveStyle : courseNavItemStyle}
+                >
+                  {tab}
+                </div>
               ))}
+            </div>
+
+            {/* 内容区域 - 根据选中标签显示不同内容 */}
+            <div style={courseContentStyle}>
+              {courseTab === '推荐' && (
+                <div style={demoListStyle}>
+                  <div style={sectionTitleStyle}>2026 春招实时练习</div>
+                  {[
+                    "2026年快手春招笔试真题（前端A卷）",
+                    "2026年腾讯暑期实习：产品综合素质测评",
+                    "字节跳动：后端研发 2026 第一场笔试模拟",
+                    "阿里巴巴：2026 校园招聘技术面经精选",
+                    "专项：计算机网络高频 50 题挑战"
+                  ].map(item => (
+                    <div key={item} style={demoItemStyle}>🔥 {item}</div>
+                  ))}
+                </div>
+              )}
+
+              {courseTab === '热门' && (
+                <div style={demoListStyle}>
+                  <div style={sectionTitleStyle}>热门课程排行榜</div>
+                  {[
+                    { title: "🔥 大厂算法突击班 - 300+高频题精讲", students: "2.3万人在学" },
+                    { title: "💼 产品经理求职实战营", students: "1.8万人在学" },
+                    { title: "📊 数据分析师从0到offer", students: "1.5万人在学" },
+                    { title: "🌐 前端架构师成长之路", students: "1.2万人在学" },
+                    { title: "🤖 AI产品经理必修课", students: "9800人在学" },
+                    { title: "📱 移动端开发全栈实战", students: "8600人在学" },
+                    { title: "☁️ 云计算与DevOps进阶", students: "7200人在学" }
+                  ].map((course, index) => (
+                    <div key={index} style={hotCourseItemStyle}>
+                      <div style={{fontWeight:'bold', fontSize:'14px'}}>{course.title}</div>
+                      <div style={{fontSize:'12px', color:'#666', marginTop:'4px'}}>{course.students}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {courseTab === '学习' && (
+                <div style={courseCardGridStyle}>
+                  <div style={learningCourseCardStyle}>
+                    <div style={learningCourseIcon}>📘</div>
+                    <div style={learningCourseTitle}>系统设计精讲</div>
+                    <div style={learningCourseDesc}>分布式、高并发、缓存策略</div>
+                    <div style={learningCoursePrice}>¥399</div>
+                  </div>
+                  <div style={learningCourseCardStyle}>
+                    <div style={learningCourseIcon}>📗</div>
+                    <div style={learningCourseTitle}>行为面试指南</div>
+                    <div style={learningCourseDesc}>STAR法则、项目经历包装</div>
+                    <div style={learningCoursePrice}>¥299</div>
+                  </div>
+                  <div style={learningCourseCardStyle}>
+                    <div style={learningCourseIcon}>📙</div>
+                    <div style={learningCourseTitle}>简历优化实战</div>
+                    <div style={learningCourseDesc}>HR筛选逻辑、关键词优化</div>
+                    <div style={learningCoursePrice}>¥199</div>
+                  </div>
+                  <div style={learningCourseCardStyle}>
+                    <div style={learningCourseIcon}>📕</div>
+                    <div style={learningCourseTitle}>薪酬谈判技巧</div>
+                    <div style={learningCourseDesc}>谈薪话术、福利争取</div>
+                    <div style={learningCoursePrice}>¥159</div>
+                  </div>
+                </div>
+              )}
+
+              {courseTab === '已购' && (
+                <div style={demoListStyle}>
+                  <div style={sectionTitleStyle}>已购课程</div>
+                  {[
+                    { title: "前端工程师面试宝典", progress: "已完成", date: "2026-03-15购买" },
+                    { title: "LeetCode刷题指南", progress: "学习进度 75%", date: "2026-02-28购买" },
+                    { title: "产品经理入门课", progress: "学习进度 30%", date: "2026-01-10购买" }
+                  ].map((course, index) => (
+                    <div key={index} style={purchasedCourseItemStyle}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <div style={{fontWeight:'bold', fontSize:'14px'}}>{course.title}</div>
+                        <div style={{fontSize:'12px', color:'#10B981'}}>{course.progress}</div>
+                      </div>
+                      <div style={{fontSize:'12px', color:'#999', marginTop:'4px'}}>{course.date}</div>
+                      <button style={continueStudyBtnStyle}>继续学习</button>
+                    </div>
+                  ))}
+                  <div style={emptyPurchasedStyle}>
+                    <div style={{fontSize:'16px', color:'#999', marginBottom:'10px'}}>暂无更多已购课程</div>
+                    <div style={{fontSize:'12px', color:'#666'}}>去首页探索更多优质课程</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {codingDemo && (
@@ -439,3 +542,150 @@ const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none
 const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee' };
 const subTitleStyle: any = { fontSize:'11px', color:'#999', marginBottom:'5px' };
 const detailTextStyle: any = { fontSize:'14px', marginBottom:'5px' };
+
+// ==================== 新增课程页面样式 ====================
+const adBannerStyle: any = {
+  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  borderRadius: '15px',
+  padding: '20px',
+  margin: '20px 0',
+  color: '#fff',
+  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+};
+
+const adBannerContent: any = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px'
+};
+
+const adBannerTitle: any = {
+  fontSize: '18px',
+  fontWeight: 'bold'
+};
+
+const adBannerSubtitle: any = {
+  fontSize: '13px',
+  opacity: 0.9
+};
+
+const adBannerPrice: any = {
+  fontSize: '14px',
+  marginTop: '8px',
+  textDecoration: 'line-through',
+  opacity: 0.8
+};
+
+const adBannerButton: any = {
+  background: '#FFD700',
+  color: '#333',
+  padding: '10px 20px',
+  borderRadius: '25px',
+  textAlign: 'center',
+  fontWeight: 'bold',
+  marginTop: '12px',
+  cursor: 'pointer',
+  width: 'fit-content'
+};
+
+const courseNavStyle: any = {
+  display: 'flex',
+  justifyContent: 'space-around',
+  background: '#fff',
+  borderRadius: '12px',
+  padding: '8px',
+  marginBottom: '15px'
+};
+
+const courseNavItemStyle: any = {
+  padding: '8px 12px',
+  fontSize: '14px',
+  color: '#666',
+  cursor: 'pointer'
+};
+
+const courseNavActiveStyle: any = {
+  ...courseNavItemStyle,
+  color: '#3B82F6',
+  fontWeight: 'bold',
+  borderBottom: '2px solid #3B82F6'
+};
+
+const courseContentStyle: any = {
+  marginTop: '10px'
+};
+
+const hotCourseItemStyle: any = {
+  background: '#fff',
+  padding: '15px',
+  borderRadius: '12px',
+  marginBottom: '10px',
+  borderLeft: '4px solid #EF4444'
+};
+
+const courseCardGridStyle: any = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '12px',
+  marginTop: '10px'
+};
+
+const learningCourseCardStyle: any = {
+  background: '#fff',
+  padding: '15px',
+  borderRadius: '12px',
+  textAlign: 'center',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+};
+
+const learningCourseIcon: any = {
+  fontSize: '28px',
+  marginBottom: '8px'
+};
+
+const learningCourseTitle: any = {
+  fontSize: '14px',
+  fontWeight: 'bold',
+  marginBottom: '4px'
+};
+
+const learningCourseDesc: any = {
+  fontSize: '11px',
+  color: '#666',
+  marginBottom: '8px',
+  lineHeight: '1.3'
+};
+
+const learningCoursePrice: any = {
+  fontSize: '16px',
+  color: '#DC2626',
+  fontWeight: 'bold'
+};
+
+const purchasedCourseItemStyle: any = {
+  background: '#fff',
+  padding: '15px',
+  borderRadius: '12px',
+  marginBottom: '12px',
+  border: '1px solid #E5E7EB'
+};
+
+const continueStudyBtnStyle: any = {
+  background: '#3B82F6',
+  color: '#fff',
+  border: 'none',
+  padding: '8px 16px',
+  borderRadius: '8px',
+  fontSize: '12px',
+  marginTop: '10px',
+  cursor: 'pointer',
+  width: '100%'
+};
+
+const emptyPurchasedStyle: any = {
+  textAlign: 'center',
+  padding: '30px 20px',
+  background: '#F9FAFB',
+  borderRadius: '12px',
+  marginTop: '20px'
+};
