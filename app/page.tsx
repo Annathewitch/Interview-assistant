@@ -67,9 +67,7 @@ export default function Page() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [realTimeTranscript, setRealTimeTranscript] = useState("");
 
-  // 新增：编程Demo状态
   const [codingDemo, setCodingDemo] = useState(false);
-  // 新增：课程页面标签状态
   const [courseTab, setCourseTab] = useState<'推荐' | '热门' | '学习' | '已购'>('推荐');
 
   // 本地存储
@@ -251,8 +249,6 @@ export default function Page() {
           </>
         )}
 
-        {/* 其他页面板块简略处理以节省空间，逻辑保持原样 */}
-        {/* --- 修改部分：课程页面（添加广告banner和导航栏）--- */}
         {bottomTab === "课程" && (
           <div style={coursePageStyle}>
             <div style={courseGridStyle}>
@@ -264,7 +260,6 @@ export default function Page() {
               </div>
             </div>
 
-            {/* 广告banner */}
             <div style={adBannerStyle}>
               <div style={adBannerContent}>
                 <div style={adBannerTitle}>🚀 限时特惠！面试突击班</div>
@@ -274,105 +269,50 @@ export default function Page() {
               </div>
             </div>
 
-            {/* 导航栏 */}
             <div style={courseNavStyle}>
               {(['推荐', '热门', '学习', '已购'] as const).map(tab => (
-                <div
-                  key={tab}
-                  onClick={() => setCourseTab(tab)}
-                  style={courseTab === tab ? courseNavActiveStyle : courseNavItemStyle}
-                >
+                <div key={tab} onClick={() => setCourseTab(tab)}
+                  style={courseTab === tab ? courseNavActiveStyle : courseNavItemStyle}>
                   {tab}
                 </div>
               ))}
             </div>
 
-            {/* 内容区域 - 根据选中标签显示不同内容 */}
             <div style={courseContentStyle}>
               {courseTab === '推荐' && (
                 <div style={demoListStyle}>
                   <div style={sectionTitleStyle}>2026 春招实时练习</div>
-                  {[
-                    "2026年快手春招笔试真题（前端A卷）",
-                    "2026年腾讯暑期实习：产品综合素质测评",
-                    "字节跳动：后端研发 2026 第一场笔试模拟",
-                    "阿里巴巴：2026 校园招聘技术面经精选",
-                    "专项：计算机网络高频 50 题挑战"
-                  ].map(item => (
+                  {["2026年快手春招笔试真题", "2026年腾讯暑期实习测评", "字节跳动：后端研发模拟"].map(item => (
                     <div key={item} style={demoItemStyle}>🔥 {item}</div>
                   ))}
                 </div>
               )}
-
               {courseTab === '热门' && (
                 <div style={demoListStyle}>
                   <div style={sectionTitleStyle}>热门课程排行榜</div>
-                  {[
-                    { title: "🔥 大厂算法突击班 - 300+高频题精讲", students: "2.3万人在学" },
-                    { title: "💼 产品经理求职实战营", students: "1.8万人在学" },
-                    { title: "📊 数据分析师从0到offer", students: "1.5万人在学" },
-                    { title: "🌐 前端架构师成长之路", students: "1.2万人在学" },
-                    { title: "🤖 AI产品经理必修课", students: "9800人在学" },
-                    { title: "📱 移动端开发全栈实战", students: "8600人在学" },
-                    { title: "☁️ 云计算与DevOps进阶", students: "7200人在学" }
-                  ].map((course, index) => (
+                  {[{ title: "大厂算法突击班", students: "2.3万人在学" }].map((course, index) => (
                     <div key={index} style={hotCourseItemStyle}>
-                      <div style={{fontWeight:'bold', fontSize:'14px'}}>{course.title}</div>
-                      <div style={{fontSize:'12px', color:'#666', marginTop:'4px'}}>{course.students}</div>
+                      <div style={{fontWeight:'bold'}}>{course.title}</div>
+                      <div style={{fontSize:'12px', color:'#666'}}>{course.students}</div>
                     </div>
                   ))}
                 </div>
               )}
-
               {courseTab === '学习' && (
                 <div style={courseCardGridStyle}>
                   <div style={learningCourseCardStyle}>
                     <div style={learningCourseIcon}>📘</div>
                     <div style={learningCourseTitle}>系统设计精讲</div>
-                    <div style={learningCourseDesc}>分布式、高并发、缓存策略</div>
                     <div style={learningCoursePrice}>¥399</div>
-                  </div>
-                  <div style={learningCourseCardStyle}>
-                    <div style={learningCourseIcon}>📗</div>
-                    <div style={learningCourseTitle}>行为面试指南</div>
-                    <div style={learningCourseDesc}>STAR法则、项目经历包装</div>
-                    <div style={learningCoursePrice}>¥299</div>
-                  </div>
-                  <div style={learningCourseCardStyle}>
-                    <div style={learningCourseIcon}>📙</div>
-                    <div style={learningCourseTitle}>简历优化实战</div>
-                    <div style={learningCourseDesc}>HR筛选逻辑、关键词优化</div>
-                    <div style={learningCoursePrice}>¥199</div>
-                  </div>
-                  <div style={learningCourseCardStyle}>
-                    <div style={learningCourseIcon}>📕</div>
-                    <div style={learningCourseTitle}>薪酬谈判技巧</div>
-                    <div style={learningCourseDesc}>谈薪话术、福利争取</div>
-                    <div style={learningCoursePrice}>¥159</div>
                   </div>
                 </div>
               )}
-
               {courseTab === '已购' && (
                 <div style={demoListStyle}>
                   <div style={sectionTitleStyle}>已购课程</div>
-                  {[
-                    { title: "前端工程师面试宝典", progress: "已完成", date: "2026-03-15购买" },
-                    { title: "LeetCode刷题指南", progress: "学习进度 75%", date: "2026-02-28购买" },
-                    { title: "产品经理入门课", progress: "学习进度 30%", date: "2026-01-10购买" }
-                  ].map((course, index) => (
-                    <div key={index} style={purchasedCourseItemStyle}>
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                        <div style={{fontWeight:'bold', fontSize:'14px'}}>{course.title}</div>
-                        <div style={{fontSize:'12px', color:'#10B981'}}>{course.progress}</div>
-                      </div>
-                      <div style={{fontSize:'12px', color:'#999', marginTop:'4px'}}>{course.date}</div>
-                      <button style={continueStudyBtnStyle}>继续学习</button>
-                    </div>
-                  ))}
-                  <div style={emptyPurchasedStyle}>
-                    <div style={{fontSize:'16px', color:'#999', marginBottom:'10px'}}>暂无更多已购课程</div>
-                    <div style={{fontSize:'12px', color:'#666'}}>去首页探索更多优质课程</div>
+                  <div style={purchasedCourseItemStyle}>
+                    <div style={{fontWeight:'bold'}}>前端工程师面试宝典</div>
+                    <button style={continueStudyBtnStyle}>继续学习</button>
                   </div>
                 </div>
               )}
@@ -382,69 +322,47 @@ export default function Page() {
               <div style={editorOverlay}>
                 <div style={problemFloatingCard}>
                   <div style={{display:'flex', justifyContent:'space-between'}}><b>题目：两数之和</b><span onClick={() => setCodingDemo(false)} style={{cursor:'pointer'}}>✕</span></div>
-                  <p style={{fontSize:'12px', marginTop:'5px'}}>2026 字节跳动高频题：给定一个整数数组 nums 和目标值 target...</p>
                 </div>
-                <textarea style={editorArea} defaultValue={"/**\n * @param {number[]} nums\n * @param {number} target\n */\nvar twoSum = function(nums, target) {\n    \n};"} />
+                <textarea style={editorArea} defaultValue={"var twoSum = function(nums, target) {};"} />
                 <button onClick={() => setCodingDemo(false)} style={modalBtnStyle}>保存并退出</button>
               </div>
             )}
           </div>
         )}
 
-        {/* --- 补充部分：社区页面 --- */}
         {bottomTab === "社区" && (
           <div style={listStyle}>
             <div style={sectionTitleStyle}>2026 求职社区广场</div>
-            {[
-              {u:"职场萌新", t:"2026年春招感觉比去年还卷，大家投了几家了？", c:"目前投了20家，只有3个面试，坐标上海。"},
-              {u:"Offer收割机", t:"美团2026届校招面经分享", c:"一共三轮技术面+一轮HR面，主要考察工程能力。"},
-              {u:"面试官阿强", t:"给2026届同学的几个建议", c:"现在更看重基础，不要只盯着框架看。"},
-              {u:"快手打工人", t:"快手春招内推直通车，欢迎私信！", c:"部门直招，HC多多，欢迎各位优秀学子。"}
-            ].map((post, i) => (
+            {[{u:"职场萌新", t:"春招好卷", c:"投了20家，只有3个面试。"}].map((post, i) => (
               <div key={i} style={cardStyle}>
                 <div style={{fontSize:'12px', color:'#3B82F6'}}>@{post.u}</div>
-                <div style={{fontWeight:'bold', margin:'5px 0'}}>{post.t}</div>
+                <div style={{fontWeight:'bold'}}>{post.t}</div>
                 <div style={{fontSize:'13px', color:'#666'}}>{post.c}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* --- 补充部分：我的页面 --- */}
         {bottomTab === "我的" && (
           <div style={profilePageStyle}>
             <div style={profileHeaderLight}>
               <div style={userInfoCard}>
                 <div style={avatarStyleLight}>头像</div>
-                <div style={{marginLeft:'15px'}}>
-                  <div style={{fontSize:'18px', fontWeight:'bold'}}>教父Corleone &gt;</div>
-                  <div style={{fontSize:'12px', color:'#999', marginTop:'4px'}}>0 粉丝 · 5 关注 · 2 动态</div>
-                </div>
+                <div style={{marginLeft:'15px'}}><div style={{fontSize:'18px', fontWeight:'bold'}}>教父Corleone &gt;</div></div>
               </div>
-            </div>
-            <div style={levelCard}>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'13px', marginBottom:'8px'}}>
-                <span style={{color:'#999', fontSize:'11px'}}>570成长值</span><span style={{color:'#999'}}>等级中心 &gt;</span>
-              </div>
-              <div style={progressBarBg}><div style={{...progressBarFill, width:'45%'}}></div></div>
-              <span style={xTag}>x1.0</span>
             </div>
             <div style={gridMenu}>
-              {[
-                {n:'我的收藏', i:'⭐'}, {n:'我的offer', i:'📄'}, {n:'学习历史', i:'🕒'},
-                {n:'购物车', i:'🛒'}, {n:'我的钱包', i:'💰'}, {n:'优惠券', i:'🎫'},
-                {n:'购买记录', i:'🧾'}, {n:'面小助课程', i:'🎓'}
-              ].map(item => (
+              {[{n:'我的收藏', i:'⭐'}, {n:'我的offer', i:'📄'}].map(item => (
                 <div key={item.n} style={gridItem}>
                   <div style={gridIconPlaceholder}>{item.i}</div>
-                  <div style={{fontSize:'12px', marginTop:'8px'}}>{item.n}</div>
+                  <div style={{fontSize:'12px'}}>{item.n}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
-      
+
       <div style={bottomBarStyle}>
         {["首页", "课程", "+", "社区", "我的"].map((tab) => (
           tab === "+" ?
@@ -472,10 +390,6 @@ export default function Page() {
             <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
               <input style={inputStyle} placeholder="公司名称" value={company} onChange={e=>setCompany(e.target.value)} />
               <input style={inputStyle} placeholder="招聘岗位" value={role} onChange={e=>setRole(e.target.value)} />
-              <div style={{display:'flex', gap:'10px'}}>
-                <input style={{...inputStyle, flex:1}} placeholder="薪资" value={salary} onChange={e=>setSalary(e.target.value)} />
-                <input style={{...inputStyle, flex:1}} placeholder="城市" value={location} onChange={e=>setLocation(e.target.value)} />
-              </div>
               <select style={inputStyle} value={status} onChange={e=>setStatus(e.target.value)}>
                 {STATUS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -488,7 +402,7 @@ export default function Page() {
   );
 }
 
-// ==================== 样式补全 ====================
+// ==================== 样式补全 (修复报错部分) ====================
 const appContainer: any = { width: "390px", height: "844px", margin: "20px auto", background: "#F9FAFB", borderRadius: "30px", overflow: "hidden", position: "relative", border:'8px solid #333' };
 const headerStyle: any = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
 const logoStyle: any = { fontSize: "16px", fontWeight: "bold" };
@@ -513,6 +427,7 @@ const dayStyle: any = { height:'35px', display:'flex', justifyContent:'center', 
 const dayActiveStyle: any = { ...dayStyle, background:'#3B82F6', color:'#fff', borderRadius:'50%' };
 const interviewDetailCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px' };
 const sectionTitleStyle: any = { fontSize:'16px', fontWeight:'bold', margin:'15px 0 10px 0' };
+const detailTextStyle: any = { fontSize:'14px', color:'#333', marginBottom:'10px' };
 const recordBtnStyle: any = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
 const recordingControlsStyle: any = { marginTop:'10px' };
 const stopRecordBtnStyle: any = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px' };
@@ -523,16 +438,47 @@ const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', 
 const reportPageStyle: any = { padding:'20px' };
 const aiBubbleStyle: any = { background:'#DBEAFE', padding:'20px', borderRadius:'15px', fontSize:'14px', whiteSpace:'pre-wrap' };
 
-// --- 补齐报错的样式定义 ---
-const detailTextStyle: any = { fontSize:'14px', color:'#333', marginBottom:'10px' };
-const subTitleStyle: any = { fontSize:'12px', color:'#999', marginBottom:'5px' };
-
+// --- 补齐课程页面样式 ---
 const coursePageStyle: any = { padding:'15px' };
 const courseGridStyle: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
-const courseCardStyle: any = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center' };
+const courseCardStyle: any = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center', cursor:'pointer' };
+const courseIconStyle: any = { fontSize:'24px', marginBottom:'8px' };
 const adBannerStyle: any = { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '15px', padding: '20px', margin: '20px 0', color: '#fff' };
+const adBannerContent: any = { display:'flex', flexDirection:'column', gap:'5px' };
 const adBannerTitle: any = { fontSize: '18px', fontWeight: 'bold' };
-const adBannerButton: any = { background: '#FFD700', color: '#333', padding: '8px 16px', borderRadius: '25px', textAlign: 'center', fontWeight: 'bold', marginTop: '10px', width: 'fit-content' };
+const adBannerSubtitle: any = { fontSize: '12px', opacity: 0.8 };
+const adBannerPrice: any = { fontSize: '12px', margin: '5px 0' };
+const adBannerButton: any = { background: '#FFD700', color: '#333', padding: '8px 16px', borderRadius: '25px', textAlign: 'center', fontWeight: 'bold', width: 'fit-content', fontSize:'12px' };
+const courseNavStyle: any = { display:'flex', gap:'20px', marginBottom:'15px', borderBottom:'1px solid #eee' };
+const courseNavItemStyle: any = { padding:'10px 0', fontSize:'14px', color:'#999', cursor:'pointer' };
+const courseNavActiveStyle: any = { ...courseNavItemStyle, color:'#3B82F6', fontWeight:'bold', borderBottom:'2px solid #3B82F6' };
+const courseContentStyle: any = { minHeight:'200px' };
+const demoListStyle: any = { display:'flex', flexDirection:'column', gap:'10px' };
+const demoItemStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px', fontSize:'13px' };
+const hotCourseItemStyle: any = { background:'#fff', padding:'15px', borderRadius:'12px', marginBottom:'10px' };
+const courseCardGridStyle: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' };
+const learningCourseCardStyle: any = { background:'#fff', padding:'15px', borderRadius:'12px' };
+const learningCourseIcon: any = { fontSize:'20px', marginBottom:'5px' };
+const learningCourseTitle: any = { fontSize:'14px', fontWeight:'bold' };
+const learningCoursePrice: any = { fontSize:'14px', color:'#DC2626', marginTop:'10px' };
+const purchasedCourseItemStyle: any = { background:'#fff', padding:'15px', borderRadius:'12px', display:'flex', justifyContent:'space-between', alignItems:'center' };
+const continueStudyBtnStyle: any = { background:'#3B82F6', color:'#fff', border:'none', padding:'5px 12px', borderRadius:'15px', fontSize:'12px' };
+
+// --- 补齐编程编辑器样式 ---
+const editorOverlay: any = { position:'fixed', inset:0, background:'#1e1e1e', zIndex:3000, display:'flex', flexDirection:'column', padding:'20px' };
+const problemFloatingCard: any = { background:'#333', color:'#fff', padding:'15px', borderRadius:'10px', marginBottom:'15px' };
+const editorArea: any = { flex:1, background:'transparent', color:'#d4d4d4', border:'none', outline:'none', fontFamily:'monospace', fontSize:'14px', resize:'none' };
+
+// --- 补齐个人中心样式 ---
+const profilePageStyle: any = { background: "#F9FAFB", height: "100%" };
+const profileHeaderLight: any = { padding: "40px 20px 20px 20px", background:'#fff' };
+const userInfoCard: any = { display:'flex', alignItems:'center' };
+const avatarStyleLight: any = { width:'60px', height:'60px', borderRadius:'50%', background:'#eee', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'12px', color:'#999' };
+const gridMenu: any = { display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'15px', padding:'20px', background:'#fff', marginTop:'10px' };
+const gridItem: any = { textAlign:'center', cursor:'pointer' };
+const gridIconPlaceholder: any = { fontSize:'24px' };
+
+// --- 通用与底部样式 ---
 const bottomBarStyle: any = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #eee" };
 const bottomItemStyle: any = { fontSize: "12px", color: "#999", cursor:'pointer' };
 const bottomActiveStyle: any = { ...bottomItemStyle, color: "#3B82F6", fontWeight:'bold' };
@@ -542,5 +488,3 @@ const modalContentStyle: any = { background: "#fff", borderRadius: "20px", paddi
 const modalCloseStyle: any = { background: "none", border: "none", fontSize:'20px', cursor:'pointer' };
 const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", cursor:'pointer', fontWeight:'bold' };
 const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee', background:'#F9FAFB' };
-const profilePageStyle: any = { background: "#fff", height: "100%" };
-const profileHeaderLight: any = { padding: "30px 20px", fontWeight: 'bold' };
