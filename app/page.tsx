@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-// --- 全局声明接口，解决 TypeScript 报错 ---
+// --- 全局声明接口 ---
 declare global {
   interface Window {
     SpeechRecognition: any;
@@ -11,37 +11,20 @@ declare global {
   }
 }
 
-type Job = {
-  id: number;
-  company: string;
-  role: string;
-  salary: string;
-  location: string;
-  status: string;
-};
-
-type Interview = {
-  id: number;
-  jobId: number;
-  date: string;
-  time: string;
-  channel: string;
-  transcript?: string;
-  audioData?: string;
-  audioBlobUrl?: string;
-  recordingDuration?: number;
-};
+type Job = { id: number; company: string; role: string; salary: string; location: string; status: string; };
+type Interview = { id: number; jobId: number; date: string; time: string; channel: string; transcript?: string; audioBlobUrl?: string; recordingDuration?: number; };
 
 const STATUS = ["刚投递", "已测评", "一面", "二面", "三面", "HR面", "Offer", "已挂"];
 
 export default function Page() {
   const [topTab, setTopTab] = useState<"岗位" | "面试" | "复盘">("岗位");
   const [bottomTab, setBottomTab] = useState("首页");
-
-  // 基础状态
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentYear] = useState(2026);
   const [currentMonth, setCurrentMonth] = useState(4);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  
+  // 表单状态
   const [showAddPop, setShowAddPop] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
   const [company, setCompany] = useState("");
@@ -50,51 +33,60 @@ export default function Page() {
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("刚投递");
 
-  // 面试与录音状态
-  const [interviews, setInterviews] = useState<Interview[]>([]);
+  // 面试排期状态
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("");
   const [channel, setChannel] = useState("腾讯会议");
+  
+  // 详情与录音状态
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [currentInterview, setCurrentInterview] = useState<Interview | null>(null);
   const [recording, setRecording] = useState(false);
   const [report, setReport] = useState("");
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [recordingTime, setRecordingTime] = useState(0);
   const [realTimeTranscript, setRealTimeTranscript] = useState("");
 
-  // 新增：编程Demo状态
+  const transcriptRef = useRef("");
+  const durationRef = useRef(0);
+
+  // 课程页面状态
   const [codingDemo, setCodingDemo] = useState(false);
-  // 新增：课程页面标签状态
   const [courseTab, setCourseTab] = useState<'推荐' | '热门' | '学习' | '已购'>('推荐');
 
-  // 本地存储
   useEffect(() => {
     const j = JSON.parse(localStorage.getItem("jobs") || "[]");
     const i = JSON.parse(localStorage.getItem("interviews") || "[]");
-    setJobs(j);
-    setInterviews(i);
+    setJobs(j); setInterviews(i);
   }, []);
 
   const saveJobs = (data: Job[]) => { setJobs(data); localStorage.setItem("jobs", JSON.stringify(data)); };
   const saveInterviews = (data: Interview[]) => { setInterviews(data); localStorage.setItem("interviews", JSON.stringify(data)); };
 
-  // --- 逻辑函数 (保持不变) ---
   const addJob = () => {
     if (!company || !role) return;
-    const newJob: Job = { id: Date.now(), company, role, salary, location, status };
+    const newJob = { id: Date.now(), company, role, salary: salary || "薪资面议", location: location || "远程", status };
     saveJobs([newJob, ...jobs]);
     setShowJobForm(false);
     setCompany(""); setRole("");
   };
 
+  // 核心修复：确认新增面试流程
   const addInterview = () => {
-    if (!selectedJob || !interviewDate || !interviewTime) return;
-    const newInterview: Interview = { id: Date.now(), jobId: selectedJob.id, date: interviewDate, time: interviewTime, channel };
-    const newList = [newInterview, ...interviews];
-    saveInterviews(newList);
+    if (!selectedJob || !interviewDate) { alert("请选择岗位和日期"); return; }
+    const newInterview: Interview = { 
+      id: Date.now(), 
+      jobId: selectedJob.id, 
+      date: interviewDate, 
+      time: interviewTime || "14:00", 
+      channel: channel || "腾讯会议",
+      transcript: "" 
+    };
+    const updated = [newInterview, ...interviews];
+    saveInterviews(updated);
+    
+    // 流程自动化：高亮日期、显示详情、清空表单
     setSelectedDay(interviewDate);
     setCurrentInterview(newInterview);
     setInterviewDate(""); setInterviewTime("");
@@ -104,68 +96,55 @@ export default function Page() {
     setSelectedDay(day);
     const found = interviews.find(it => it.date === day) || null;
     setCurrentInterview(found);
+    setRealTimeTranscript(""); 
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // --- 核心录音逻辑 (保持不变) ---
   const startRecording = async () => {
     if (!currentInterview) return;
-    setRecording(true); setAudioChunks([]); setRecordingTime(0); setRealTimeTranscript("");
+    setRecording(true); setRecordingTime(0); setRealTimeTranscript("");
+    transcriptRef.current = ""; durationRef.current = 0;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) setAudioChunks(p => [...p, e.data]); };
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        if (currentInterview) {
-          const updated = interviews.map(it => it.id === currentInterview.id ? { ...it, transcript: realTimeTranscript || "未检测到语音", audioBlobUrl: audioUrl, recordingDuration: recordingTime } : it);
-          saveInterviews(updated);
-          setCurrentInterview({ ...currentInterview, transcript: realTimeTranscript, audioBlobUrl: audioUrl, recordingDuration: recordingTime });
-        }
+        const audioUrl = URL.createObjectURL(new Blob(chunks));
+        const finalT = transcriptRef.current || "未检测到内容";
+        const updated = interviews.map(it => it.id === currentInterview.id ? { ...it, transcript: finalT, audioBlobUrl: audioUrl } : it);
+        saveInterviews(updated);
+        setCurrentInterview(prev => prev ? { ...prev, transcript: finalT, audioBlobUrl: audioUrl } : null);
       };
-      recorder.start(1000);
+      recorder.start();
       setMediaRecorder(recorder);
       const timer = setInterval(() => setRecordingTime(v => v + 1), 1000);
       window.recordingTimer = { current: timer };
-      startSpeechRecognition();
-    } catch (e) { console.error(e); setRecording(false); }
+      
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (Recognition) {
+        const rec = new Recognition(); rec.lang = 'zh-CN'; rec.continuous = true; rec.interimResults = true;
+        rec.onresult = (e: any) => {
+          let t = ''; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+          setRealTimeTranscript(t); transcriptRef.current = t;
+        };
+        rec.start(); window.currentRecognition = rec;
+      }
+    } catch (e) { setRecording(false); alert("麦克风启动失败"); }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t => t.stop()); }
-    stopSpeechRecognition();
+    mediaRecorder?.stop();
+    mediaRecorder?.stream.getTracks().forEach(t => t.stop());
+    window.currentRecognition?.stop();
+    if (window.recordingTimer?.current) clearInterval(window.recordingTimer.current);
     setRecording(false);
-    if (window.recordingTimer?.current) { clearInterval(window.recordingTimer.current); delete window.recordingTimer; }
-  };
-
-  const startSpeechRecognition = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'zh-CN'; recognition.continuous = true; recognition.interimResults = true;
-    recognition.onresult = (event: any) => {
-      let text = '';
-      for (let i = 0; i < event.results.length; i++) { text += event.results[i][0].transcript; }
-      setRealTimeTranscript(text);
-    };
-    recognition.start();
-    window.currentRecognition = recognition;
-  };
-
-  const stopSpeechRecognition = () => {
-    if (window.currentRecognition) { window.currentRecognition.stop(); delete window.currentRecognition; }
   };
 
   const goToReport = () => {
     if (!currentInterview) return;
-    setReport(`【AI复盘】\n面试公司：${jobs.find(j=>j.id===currentInterview.jobId)?.company}\n内容：${currentInterview.transcript}\n建议：表现不错，建议加强基础知识储备。`);
+    const content = currentInterview.transcript || realTimeTranscript;
+    setReport(`【2026 AI 复盘报告】\n内容：${content}\n\n建议：表现不错，但针对项目细节可以进一步深挖。`);
     setTopTab("复盘");
   };
 
@@ -179,8 +158,7 @@ export default function Page() {
       {bottomTab === "首页" && (
         <div style={topTabBarStyle}>
           {["岗位", "面试", "复盘"].map((t) => (
-            <div key={t} onClick={() => setTopTab(t as any)}
-              style={topTab === t ? topTabActiveStyle : topTabItemStyle}>{t}</div>
+            <div key={t} onClick={() => setTopTab(t as any)} style={topTab === t ? topTabActiveStyle : topTabItemStyle}>{t}</div>
           ))}
         </div>
       )}
@@ -190,15 +168,14 @@ export default function Page() {
           <>
             {topTab === "岗位" && (
               <div style={listStyle}>
-                {jobs.length === 0 && <div style={emptyStyle}>暂无岗位，点击下方"+"添加</div>}
                 {jobs.map(job => (
                   <div key={job.id} style={cardStyle}>
-                    <div style={titleStyle}>{job.role}</div>
-                    <div style={infoStyle}>{job.company} · {job.salary}</div>
-                    <button onClick={() => { setSelectedJob(job); setTopTab("面试"); }}
-                      style={{ ...tagStyle, backgroundColor: "#3B82F6", cursor:'pointer' }}>
-                      {job.status} (排期)
-                    </button>
+                    <div style={{display:'flex', justifyContent:'space-between'}}>
+                      <div style={titleStyle}>{job.role}</div>
+                      <span style={{fontSize:'12px', color:'#3B82F6'}}>{job.salary}</span>
+                    </div>
+                    <div style={infoStyle}>{job.company} · {job.location}</div>
+                    <button onClick={() => { setSelectedJob(job); setTopTab("面试"); }} style={goBtnStyle}>去排期</button>
                   </div>
                 ))}
               </div>
@@ -208,40 +185,52 @@ export default function Page() {
               <div style={interviewPageStyle}>
                 <div style={calendarCardStyle}>
                   <div style={calendarHeaderStyle}>
-                    <div onClick={() => setCurrentMonth(m => m === 1 ? 12 : m - 1)} style={arrowStyle}>◀</div>
+                    <div onClick={() => setCurrentMonth(m => m - 1)} style={arrowStyle}>◀</div>
                     <div style={monthStyle}>{currentYear}年{currentMonth}月</div>
-                    <div onClick={() => setCurrentMonth(m => m === 12 ? 1 : m + 1)} style={arrowStyle}>▶</div>
+                    <div onClick={() => setCurrentMonth(m => m + 1)} style={arrowStyle}>▶</div>
                   </div>
                   <div style={daysGridStyle}>
                     {Array.from({ length: 30 }, (_, i) => {
-                      const date = `${currentYear}-${currentMonth.toString().padStart(2,'0')}-${(i+1).toString().padStart(2,'0')}`;
-                      return <div key={date} onClick={() => handleSelectDay(date)} style={selectedDay === date ? dayActiveStyle : dayStyle}>{i+1}</div>
+                      const d = `2026-${currentMonth.toString().padStart(2,'0')}-${(i+1).toString().padStart(2,'0')}`;
+                      const hasI = interviews.some(it => it.date === d);
+                      return (
+                        <div key={d} onClick={() => handleSelectDay(d)} style={selectedDay === d ? dayActiveStyle : dayStyle}>
+                          {i+1} {hasI && <div style={dotStyle}></div>}
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
 
+                {selectedDay && !currentInterview && (
+                  <div style={interviewDetailCardStyle}>
+                    <div style={sectionTitleStyle}>安排面试 - {selectedDay}</div>
+                    <select style={inputStyle} onChange={e => setSelectedJob(jobs.find(j=>j.id===Number(e.target.value))||null)}>
+                      <option>选择关联岗位</option>
+                      {jobs.map(j => <option key={j.id} value={j.id}>{j.company}-{j.role}</option>)}
+                    </select>
+                    <input type="time" style={inputStyle} value={interviewTime} onChange={e=>setInterviewTime(e.target.value)} />
+                    <button onClick={addInterview} style={recordBtnStyle}>确认并新增面试</button>
+                  </div>
+                )}
+
                 {selectedDay && currentInterview && (
                   <div style={interviewDetailCardStyle}>
                     <div style={sectionTitleStyle}>面试详情</div>
-                    <div style={detailTextStyle}>公司：{jobs.find(j => j.id === currentInterview.jobId)?.company}</div>
                     {!recording ? (
-                      <button onClick={startRecording} style={recordBtnStyle}>🎙️ 开始录音</button>
+                      <button onClick={startRecording} style={recordBtnStyle}>🎙️ 开始面试录音</button>
                     ) : (
-                      <div style={recordingControlsStyle}>
-                        <button onClick={stopRecording} style={stopRecordBtnStyle}>⏹️ 停止录音</button>
-                        <div style={recordingTimerStyle}>🔴 录制中: {formatTime(recordingTime)}</div>
-                      </div>
+                      <button onClick={stopRecording} style={stopRecordBtnStyle}>⏹️ 停止并保存 ({recordingTime}s)</button>
                     )}
-                    <div style={transcriptCardStyle}>
-                      <div style={transcriptTextStyle}>{realTimeTranscript || currentInterview.transcript || "暂无录音"}</div>
-                    </div>
-                    {!recording && currentInterview.transcript && <button onClick={goToReport} style={reportBtnStyle}>🚀 AI 复盘</button>}
+                    <div style={transcriptCardStyle}>{realTimeTranscript || currentInterview.transcript || "暂无记录"}</div>
+                    {(currentInterview.transcript || realTimeTranscript) && !recording && (
+                      <button onClick={goToReport} style={reportBtnStyle}>🚀 AI 智能复盘</button>
+                    )}
                   </div>
                 )}
               </div>
             )}
-
-            {topTab === "复盘" && <div style={reportPageStyle}><div style={aiBubbleStyle}>{report || "暂无复盘"}</div></div>}
+            {topTab === "复盘" && <div style={reportPageStyle}><div style={aiBubbleStyle}>{report || "暂无报告"}</div></div>}
           </>
         )}
 
@@ -438,40 +427,20 @@ export default function Page() {
         )}
       </div>
 
-      {/* 底部导航 */}
       <div style={bottomBarStyle}>
         {["首页", "课程", "+", "社区", "我的"].map((tab) => (
-          tab === "+" ?
-          <div key={tab} onClick={() => setShowAddPop(true)} style={bottomAddStyle}>+</div> :
+          tab === "+" ? <div key={tab} onClick={() => setShowAddPop(true)} style={bottomAddStyle}>+</div> :
           <div key={tab} onClick={() => setBottomTab(tab)} style={bottomTab === tab ? bottomActiveStyle : bottomItemStyle}>{tab}</div>
         ))}
       </div>
 
-      {/* 弹窗逻辑保持不变... */}
-      {showAddPop && (
-        <div style={modalStyle} onClick={() => setShowAddPop(false)}>
-          <div style={modalContentStyle} onClick={e=>e.stopPropagation()}>
-            <button onClick={() => { setShowJobForm(true); setShowAddPop(false); }} style={modalBtnStyle}>记录岗位</button>
-            <button onClick={() => { setTopTab("面试"); setShowAddPop(false); }} style={modalBtnStyle}>安排面试</button>
-          </div>
-        </div>
-      )}
-
-      {showJobForm && (
-        <div style={modalStyle}>
-          <div style={modalContentStyle}>
-            <button style={modalCloseStyle} onClick={() => setShowJobForm(false)}>✕</button>
-            <input style={inputStyle} placeholder="公司" value={company} onChange={e=>setCompany(e.target.value)} />
-            <input style={inputStyle} placeholder="岗位" value={role} onChange={e=>setRole(e.target.value)} />
-            <button onClick={addJob} style={modalBtnStyle}>保存岗位</button>
-          </div>
-        </div>
-      )}
+      {showAddPop && <div style={modalStyle} onClick={()=>setShowAddPop(false)}><div style={modalContentStyle} onClick={e=>e.stopPropagation()}><button onClick={()=>{setShowJobForm(true);setShowAddPop(false)}} style={modalBtnStyle}>📝 记录新岗位</button></div></div>}
+      {showJobForm && <div style={modalStyle}><div style={modalContentStyle}><b>录入岗位</b><input style={inputStyle} placeholder="公司" onChange={e=>setCompany(e.target.value)} /><button onClick={addJob} style={modalBtnStyle}>保存</button><button onClick={()=>setShowJobForm(false)}>关闭</button></div></div>}
     </div>
   );
 }
 
-// ==================== 样式 (包含新增样式) ====================
+// ==================== 样式补全 ====================
 const appContainer: any = { width: "390px", height: "844px", margin: "20px auto", background: "#F9FAFB", borderRadius: "30px", overflow: "hidden", position: "relative", border:'8px solid #333' };
 const headerStyle: any = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
 const logoStyle: any = { fontSize: "16px", fontWeight: "bold" };
@@ -484,208 +453,53 @@ const listStyle: any = { padding: "15px" };
 const cardStyle: any = { background: "#fff", borderRadius: "12px", padding: "16px", marginBottom: "10px", boxShadow: '0 2px 8px rgba(0,0,0,0.05)' };
 const titleStyle: any = { fontSize: "16px", fontWeight: "bold" };
 const infoStyle: any = { fontSize: "13px", color: "#666", marginTop:'4px' };
-const tagStyle: any = { fontSize: "11px", color: "#fff", padding: "3px 8px", borderRadius: "8px", border: "none", marginTop: "8px" };
-const emptyStyle: any = { textAlign:'center', color:'#999', padding:'40px 0' };
+const goBtnStyle: any = { marginTop:'10px', background:'#EEF2FF', color:'#3B82F6', border:'none', padding:'5px 10px', borderRadius:'5px', fontSize:'12px' };
 const interviewPageStyle: any = { padding:'15px' };
 const calendarCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px', marginBottom:'15px' };
 const calendarHeaderStyle: any = { display:'flex', justifyContent:'space-between', marginBottom:'10px' };
 const arrowStyle: any = { cursor:'pointer', color:'#3B82F6' };
 const monthStyle: any = { fontWeight:'bold' };
 const daysGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'5px' };
-const dayStyle: any = { height:'35px', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'13px' };
+const dayStyle: any = { height:'35px', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'13px', position:'relative', cursor:'pointer' };
 const dayActiveStyle: any = { ...dayStyle, background:'#3B82F6', color:'#fff', borderRadius:'50%' };
+const dotStyle: any = { width:'4px', height:'4px', background:'#10B981', borderRadius:'50%', position:'absolute', bottom:'2px' };
 const interviewDetailCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px' };
-const recordBtnStyle: any = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
-const recordingControlsStyle: any = { marginTop:'10px' };
-const stopRecordBtnStyle: any = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px' };
-const recordingTimerStyle: any = { textAlign:'center', fontSize:'12px', color:'#DC2626', marginTop:'5px' };
-const transcriptCardStyle: any = { background:'#F9FAFB', padding:'15px', borderRadius:'12px', marginTop:'10px' };
-const transcriptTextStyle: any = { fontSize:'13px', lineHeight:'1.5' };
-const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
+const sectionTitleStyle: any = { fontSize:'16px', fontWeight:'bold', margin:'10px 0' };
+const recordBtnStyle: any = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px', fontWeight:'bold' };
+const stopRecordBtnStyle: any = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', fontWeight:'bold' };
+const transcriptCardStyle: any = { background:'#F3F4F6', padding:'15px', borderRadius:'12px', marginTop:'15px', minHeight:'60px', fontSize:'13px' };
+const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'15px', fontWeight:'bold' };
 const reportPageStyle: any = { padding:'20px' };
 const aiBubbleStyle: any = { background:'#DBEAFE', padding:'20px', borderRadius:'15px', fontSize:'14px', whiteSpace:'pre-wrap' };
-
-// 课程与社区样式
 const coursePageStyle: any = { padding:'15px' };
 const courseGridStyle: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
-const courseCardStyle: any = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center', cursor:'pointer' };
-const courseIconStyle: any = { fontSize:'24px', marginBottom:'8px' };
-const demoListStyle: any = { marginTop:'20px' };
-const demoItemStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px', marginBottom:'10px', fontSize:'13px' };
-const editorOverlay: any = { position:'absolute', inset:0, background:'#1e1e1e', color:'#fff', zIndex:100, padding:'20px', display:'flex', flexDirection:'column' };
-const problemFloatingCard: any = { background:'#333', padding:'15px', borderRadius:'12px', marginBottom:'15px' };
-const editorArea: any = { flex:1, background:'#252526', color:'#fff', padding:'15px', fontFamily:'monospace', border:'none', outline:'none', borderRadius:'8px' };
-const sectionTitleStyle: any = { fontSize:'16px', fontWeight:'bold', margin:'15px 0 10px 0' };
-
-// 我的页面样式
-const profilePageStyle: any = { background: "#fff", height: "100%" };
-const profileHeaderLight: any = { padding: "30px 20px" };
-const userInfoCard: any = { display: "flex", alignItems: "center" };
-const avatarStyleLight: any = { width: "50px", height: "50px", borderRadius: "25px", background: "#eee", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "10px" };
-const levelCard: any = { margin:'0 20px', padding:'15px', background:'#f8f8f8', borderRadius:'12px', position:'relative' };
-const progressBarBg: any = { height:'4px', background:'#eee', borderRadius:'2px', overflow:'hidden' };
-const progressBarFill: any = { height:'100%', background:'#FFD700' };
-const xTag: any = { position:'absolute', right:'15px', bottom:'10px', fontSize:'10px', color:'#999' };
-const gridMenu: any = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 10px", gap:'15px' };
-const gridItem: any = { textAlign: "center" };
-const gridIconPlaceholder: any = { fontSize: "22px" };
-
-// 通用组件
+const courseCardStyle: any = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center', fontSize:'14px' };
+const adBannerStyle: any = { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '15px', padding: '15px', margin: '15px 0', color: '#fff' };
+const adBannerTitle: any = { fontSize: '16px', fontWeight: 'bold' };
+const adBannerPrice: any = { fontSize: '14px', margin: '5px 0' };
+const adBannerButton: any = { background: '#FFD700', color: '#333', padding: '5px 12px', borderRadius: '15px', fontSize:'11px', width:'fit-content' };
+const courseNavStyle: any = { display:'flex', gap:'15px', marginBottom:'10px' };
+const courseNavItemStyle: any = { fontSize:'14px', color:'#999' };
+const courseNavActiveStyle: any = { ...courseNavItemStyle, color:'#3B82F6', fontWeight:'bold', borderBottom:'2px solid #3B82F6' };
+const demoListStyle: any = { display:'flex', flexDirection:'column', gap:'8px' };
+const demoItemStyle: any = { background:'#fff', padding:'10px', borderRadius:'8px', fontSize:'12px' };
+const hotCourseItemStyle: any = { background:'#fff', padding:'10px', borderRadius:'8px' };
+const editorOverlay: any = { position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center' };
+const problemFloatingCard: any = { background:'#fff', padding:'20px', borderRadius:'10px' };
 const bottomBarStyle: any = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #eee" };
-const bottomItemStyle: any = { fontSize: "12px", color: "#999", cursor:'pointer' };
+const bottomItemStyle: any = { fontSize: "12px", color: "#999" };
 const bottomActiveStyle: any = { ...bottomItemStyle, color: "#3B82F6", fontWeight:'bold' };
-const bottomAddStyle: any = { width: "45px", height: "45px", background: "#3B82F6", borderRadius: "50%", color: "#fff", fontSize: "24px", display:'flex', justifyContent:'center', alignItems:'center', cursor:'pointer' };
+const bottomAddStyle: any = { width: "45px", height: "45px", background: "#3B82F6", borderRadius: "50%", color: "#fff", fontSize: "24px", display:'flex', justifyContent:'center', alignItems:'center' };
 const modalStyle: any = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 };
-const modalContentStyle: any = { width: "300px", background: "#fff", borderRadius: "20px", padding: "25px", display: "flex", flexDirection: "column", gap: "15px" };
-const modalCloseStyle: any = { alignSelf: "flex-end", background: "none", border: "none", fontSize:'20px' };
-const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", cursor:'pointer' };
-const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee' };
-const subTitleStyle: any = { fontSize:'11px', color:'#999', marginBottom:'5px' };
-const detailTextStyle: any = { fontSize:'14px', marginBottom:'5px' };
-
-// ==================== 新增课程页面样式 ====================
-const adBannerStyle: any = {
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  borderRadius: '15px',
-  padding: '20px',
-  margin: '20px 0',
-  color: '#fff',
-  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
-};
-
-const adBannerContent: any = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px'
-};
-
-const adBannerTitle: any = {
-  fontSize: '18px',
-  fontWeight: 'bold'
-};
-
-const adBannerSubtitle: any = {
-  fontSize: '13px',
-  opacity: 0.9
-};
-
-const adBannerPrice: any = {
-  fontSize: '14px',
-  marginTop: '8px',
-  textDecoration: 'line-through',
-  opacity: 0.8
-};
-
-const adBannerButton: any = {
-  background: '#FFD700',
-  color: '#333',
-  padding: '10px 20px',
-  borderRadius: '25px',
-  textAlign: 'center',
-  fontWeight: 'bold',
-  marginTop: '12px',
-  cursor: 'pointer',
-  width: 'fit-content'
-};
-
-const courseNavStyle: any = {
-  display: 'flex',
-  justifyContent: 'space-around',
-  background: '#fff',
-  borderRadius: '12px',
-  padding: '8px',
-  marginBottom: '15px'
-};
-
-const courseNavItemStyle: any = {
-  padding: '8px 12px',
-  fontSize: '14px',
-  color: '#666',
-  cursor: 'pointer'
-};
-
-const courseNavActiveStyle: any = {
-  ...courseNavItemStyle,
-  color: '#3B82F6',
-  fontWeight: 'bold',
-  borderBottom: '2px solid #3B82F6'
-};
-
-const courseContentStyle: any = {
-  marginTop: '10px'
-};
-
-const hotCourseItemStyle: any = {
-  background: '#fff',
-  padding: '15px',
-  borderRadius: '12px',
-  marginBottom: '10px',
-  borderLeft: '4px solid #EF4444'
-};
-
-const courseCardGridStyle: any = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '12px',
-  marginTop: '10px'
-};
-
-const learningCourseCardStyle: any = {
-  background: '#fff',
-  padding: '15px',
-  borderRadius: '12px',
-  textAlign: 'center',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-};
-
-const learningCourseIcon: any = {
-  fontSize: '28px',
-  marginBottom: '8px'
-};
-
-const learningCourseTitle: any = {
-  fontSize: '14px',
-  fontWeight: 'bold',
-  marginBottom: '4px'
-};
-
-const learningCourseDesc: any = {
-  fontSize: '11px',
-  color: '#666',
-  marginBottom: '8px',
-  lineHeight: '1.3'
-};
-
-const learningCoursePrice: any = {
-  fontSize: '16px',
-  color: '#DC2626',
-  fontWeight: 'bold'
-};
-
-const purchasedCourseItemStyle: any = {
-  background: '#fff',
-  padding: '15px',
-  borderRadius: '12px',
-  marginBottom: '12px',
-  border: '1px solid #E5E7EB'
-};
-
-const continueStudyBtnStyle: any = {
-  background: '#3B82F6',
-  color: '#fff',
-  border: 'none',
-  padding: '8px 16px',
-  borderRadius: '8px',
-  fontSize: '12px',
-  marginTop: '10px',
-  cursor: 'pointer',
-  width: '100%'
-};
-
-const emptyPurchasedStyle: any = {
-  textAlign: 'center',
-  padding: '30px 20px',
-  background: '#F9FAFB',
-  borderRadius: '12px',
-  marginTop: '20px'
-};
+const modalContentStyle: any = { background: "#fff", borderRadius: "20px", padding: "20px", width:'300px' };
+const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none", padding: "10px", borderRadius: "8px", width:'100%', marginBottom:'5px' };
+const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee', marginBottom:'10px' };
+const profilePageStyle: any = { background: "#F9FAFB", height: "100%" };
+const profileHeaderLight: any = { padding: "40px 20px 20px 20px", background:'#fff' };
+const userInfoCard: any = { display:'flex', alignItems:'center' };
+const avatarStyleLight: any = { width:'50px', height:'50px', borderRadius:'50%', background:'#eee', fontSize:'10px', display:'flex', alignItems:'center', justifyContent:'center' };
+const levelCard: any = { padding:'15px', background:'#fff', marginTop:'2px' };
+const progressBarBg: any = { width:'100%', height:'6px', background:'#eee', borderRadius:'3px', marginTop:'5px' };
+const progressBarFill: any = { height:'100%', background:'#3B82F6', borderRadius:'3px' };
+const gridMenu: any = { display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'10px', padding:'20px' };
+const gridItem: any = { textAlign:'center', padding:'10px' };
