@@ -72,7 +72,6 @@ export default function Page() {
     setCompany(""); setRole("");
   };
 
-  // 核心修复：确认新增面试流程
   const addInterview = () => {
     if (!selectedJob || !interviewDate) { alert("请选择岗位和日期"); return; }
     const newInterview: Interview = { 
@@ -86,7 +85,6 @@ export default function Page() {
     const updated = [newInterview, ...interviews];
     saveInterviews(updated);
     
-    // 流程自动化：高亮日期、显示详情、清空表单
     setSelectedDay(interviewDate);
     setCurrentInterview(newInterview);
     setInterviewDate(""); setInterviewTime("");
@@ -234,7 +232,6 @@ export default function Page() {
           </>
         )}
 
-        {/* --- 修改部分：课程页面（添加广告banner和导航栏）--- */}
         {bottomTab === "课程" && (
           <div style={coursePageStyle}>
             <div style={courseGridStyle}>
@@ -246,7 +243,6 @@ export default function Page() {
               </div>
             </div>
 
-            {/* 广告banner */}
             <div style={adBannerStyle}>
               <div style={adBannerContent}>
                 <div style={adBannerTitle}>🚀 限时特惠！面试突击班</div>
@@ -256,31 +252,19 @@ export default function Page() {
               </div>
             </div>
 
-            {/* 导航栏 */}
             <div style={courseNavStyle}>
               {(['推荐', '热门', '学习', '已购'] as const).map(tab => (
-                <div
-                  key={tab}
-                  onClick={() => setCourseTab(tab)}
-                  style={courseTab === tab ? courseNavActiveStyle : courseNavItemStyle}
-                >
+                <div key={tab} onClick={() => setCourseTab(tab)} style={courseTab === tab ? courseNavActiveStyle : courseNavItemStyle}>
                   {tab}
                 </div>
               ))}
             </div>
 
-            {/* 内容区域 - 根据选中标签显示不同内容 */}
             <div style={courseContentStyle}>
               {courseTab === '推荐' && (
                 <div style={demoListStyle}>
                   <div style={sectionTitleStyle}>2026 春招实时练习</div>
-                  {[
-                    "2026年快手春招笔试真题（前端A卷）",
-                    "2026年腾讯暑期实习：产品综合素质测评",
-                    "字节跳动：后端研发 2026 第一场笔试模拟",
-                    "阿里巴巴：2026 校园招聘技术面经精选",
-                    "专项：计算机网络高频 50 题挑战"
-                  ].map(item => (
+                  {["2026年快手春招笔试真题", "2026年腾讯暑期实习", "字节跳动笔试模拟"].map(item => (
                     <div key={item} style={demoItemStyle}>🔥 {item}</div>
                   ))}
                 </div>
@@ -303,6 +287,16 @@ export default function Page() {
                       <div style={{fontSize:'12px', color:'#666', marginTop:'4px'}}>{course.students}</div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {courseTab === '学习' && (
+                <div style={courseCardGridStyle}>
+                  <div style={learningCourseCardStyle}>
+                    <div style={learningCourseIcon}>📘</div>
+                    <div style={learningCourseTitle}>系统设计精讲</div>
+                    <div style={learningCoursePrice}>¥399</div>
+                  </div>
                 </div>
               )}
 
@@ -359,14 +353,13 @@ export default function Page() {
                 </div>
               )}
             </div>
-
+            
             {codingDemo && (
               <div style={editorOverlay}>
                 <div style={problemFloatingCard}>
                   <div style={{display:'flex', justifyContent:'space-between'}}><b>题目：两数之和</b><span onClick={() => setCodingDemo(false)} style={{cursor:'pointer'}}>✕</span></div>
-                  <p style={{fontSize:'12px', marginTop:'5px'}}>2026 字节跳动高频题：给定一个整数数组 nums 和目标值 target...</p>
                 </div>
-                <textarea style={editorArea} defaultValue={"/**\n * @param {number[]} nums\n * @param {number} target\n */\nvar twoSum = function(nums, target) {\n    \n};"} />
+                <textarea style={editorArea} defaultValue={"// 代码区域"} />
                 <button onClick={() => setCodingDemo(false)} style={modalBtnStyle}>保存并退出</button>
               </div>
             )}
@@ -426,7 +419,7 @@ export default function Page() {
           </div>
         )}
       </div>
-
+      
       <div style={bottomBarStyle}>
         {["首页", "课程", "+", "社区", "我的"].map((tab) => (
           tab === "+" ? <div key={tab} onClick={() => setShowAddPop(true)} style={bottomAddStyle}>+</div> :
@@ -471,21 +464,37 @@ const transcriptCardStyle: any = { background:'#F3F4F6', padding:'15px', borderR
 const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'15px', fontWeight:'bold' };
 const reportPageStyle: any = { padding:'20px' };
 const aiBubbleStyle: any = { background:'#DBEAFE', padding:'20px', borderRadius:'15px', fontSize:'14px', whiteSpace:'pre-wrap' };
+
+// 补充缺失的课程样式
 const coursePageStyle: any = { padding:'15px' };
-const courseGridStyle: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
-const courseCardStyle: any = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center', fontSize:'14px' };
-const adBannerStyle: any = { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '15px', padding: '15px', margin: '15px 0', color: '#fff' };
+const courseGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'12px', marginBottom:'20px' };
+const courseCardStyle: any = { background:'#fff', padding:'15px', borderRadius:'12px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.05)' };
+const courseIconStyle: any = { fontSize:'24px', marginBottom:'8px' };
+const adBannerStyle: any = { background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', borderRadius: '15px', padding: '15px', marginBottom: '20px', color: '#fff' };
+const adBannerContent: any = { display:'flex', flexDirection:'column', gap:'5px' };
 const adBannerTitle: any = { fontSize: '16px', fontWeight: 'bold' };
-const adBannerPrice: any = { fontSize: '14px', margin: '5px 0' };
-const adBannerButton: any = { background: '#FFD700', color: '#333', padding: '5px 12px', borderRadius: '15px', fontSize:'11px', width:'fit-content' };
-const courseNavStyle: any = { display:'flex', gap:'15px', marginBottom:'10px' };
-const courseNavItemStyle: any = { fontSize:'14px', color:'#999' };
+const adBannerSubtitle: any = { fontSize: '12px', opacity: 0.9 };
+const adBannerPrice: any = { fontSize: '12px' };
+const adBannerButton: any = { background: '#fff', color: '#3B82F6', border: 'none', padding: '6px 12px', borderRadius: '20px', fontSize:'12px', width:'fit-content', marginTop:'5px', fontWeight:'bold' };
+const courseNavStyle: any = { display:'flex', gap:'20px', borderBottom:'1px solid #eee', marginBottom:'15px', paddingBottom:'5px' };
+const courseNavItemStyle: any = { fontSize:'14px', color:'#999', cursor:'pointer' };
 const courseNavActiveStyle: any = { ...courseNavItemStyle, color:'#3B82F6', fontWeight:'bold', borderBottom:'2px solid #3B82F6' };
-const demoListStyle: any = { display:'flex', flexDirection:'column', gap:'8px' };
-const demoItemStyle: any = { background:'#fff', padding:'10px', borderRadius:'8px', fontSize:'12px' };
-const hotCourseItemStyle: any = { background:'#fff', padding:'10px', borderRadius:'8px' };
-const editorOverlay: any = { position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center' };
-const problemFloatingCard: any = { background:'#fff', padding:'20px', borderRadius:'10px' };
+const courseContentStyle: any = { paddingBottom:'20px' };
+const demoListStyle: any = { display:'flex', flexDirection:'column', gap:'10px' };
+const demoItemStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px', fontSize:'14px' };
+const hotCourseItemStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px' };
+const courseCardGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'10px' };
+const learningCourseCardStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px' };
+const learningCourseIcon: any = { fontSize:'20px' };
+const learningCourseTitle: any = { fontSize:'14px', fontWeight:'bold', margin:'5px 0' };
+const learningCoursePrice: any = { fontSize:'14px', color:'#3B82F6' };
+const purchasedCourseItemStyle: any = { background:'#fff', padding:'15px', borderRadius:'10px' };
+const continueStudyBtnStyle: any = { width:'100%', background:'#3B82F6', color:'#fff', border:'none', padding:'8px', borderRadius:'8px', marginTop:'10px' };
+const editorOverlay: any = { position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', flexDirection:'column', padding:'40px 20px' };
+const problemFloatingCard: any = { background:'#fff', padding:'15px', borderRadius:'10px', marginBottom:'10px' };
+const editorArea: any = { flex:1, background:'#1E1E1E', color:'#D4D4D4', padding:'15px', borderRadius:'10px', fontFamily:'monospace', fontSize:'14px', marginBottom:'10px' };
+
+// 底部导航样式
 const bottomBarStyle: any = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #eee" };
 const bottomItemStyle: any = { fontSize: "12px", color: "#999" };
 const bottomActiveStyle: any = { ...bottomItemStyle, color: "#3B82F6", fontWeight:'bold' };
@@ -494,12 +503,15 @@ const modalStyle: any = { position: "fixed", inset: 0, background: "rgba(0,0,0,0
 const modalContentStyle: any = { background: "#fff", borderRadius: "20px", padding: "20px", width:'300px' };
 const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none", padding: "10px", borderRadius: "8px", width:'100%', marginBottom:'5px' };
 const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee', marginBottom:'10px' };
+
+// 我的页面样式
 const profilePageStyle: any = { background: "#F9FAFB", height: "100%" };
 const profileHeaderLight: any = { padding: "40px 20px 20px 20px", background:'#fff' };
 const userInfoCard: any = { display:'flex', alignItems:'center' };
 const avatarStyleLight: any = { width:'50px', height:'50px', borderRadius:'50%', background:'#eee', fontSize:'10px', display:'flex', alignItems:'center', justifyContent:'center' };
-const levelCard: any = { padding:'15px', background:'#fff', marginTop:'2px' };
-const progressBarBg: any = { width:'100%', height:'6px', background:'#eee', borderRadius:'3px', marginTop:'5px' };
+const levelCard: any = { padding:'15px', background:'#fff', marginTop:'2px', display:'flex', flexDirection:'column', gap:'10px' };
+const progressBarBg: any = { width:'100%', height:'6px', background:'#eee', borderRadius:'3px' };
 const progressBarFill: any = { height:'100%', background:'#3B82F6', borderRadius:'3px' };
+const xTagStyle: any = { fontSize:'10px', color:'#999' };
 const gridMenu: any = { display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'10px', padding:'20px' };
 const gridItem: any = { textAlign:'center', padding:'10px' };
