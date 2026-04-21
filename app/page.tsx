@@ -142,7 +142,7 @@ export default function Page() {
     setTopTab("复盘");
   };
 
-  return (
+    return (
     <div style={appContainer}>
       <div style={headerStyle}>
         <div style={logoStyle}>求职助手 2026</div>
@@ -445,7 +445,6 @@ export default function Page() {
 }
 
 // ==================== 样式 ====================
-const appContainer: any = { width: "390px", height: "844px", margin: "20px auto", background: "#F9FAFB", borderRadius: "30px", overflow: "hidden", position: "relative", border:'8px solid #333' };
 const headerStyle: any = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
 const logoStyle: any = { fontSize: "16px", fontWeight: "bold" };
 const searchStyle: any = { flex: 1, padding: "8px 14px", borderRadius: "20px", background: "#F3F4F6", border: "none" };
@@ -457,33 +456,135 @@ const listStyle: any = { padding: "15px" };
 const cardStyle: any = { background: "#fff", borderRadius: "12px", padding: "16px", marginBottom: "10px", boxShadow: '0 2px 8px rgba(0,0,0,0.05)' };
 const titleStyle: any = { fontSize: "16px", fontWeight: "bold" };
 const infoStyle: any = { fontSize: "13px", color: "#666", marginTop:'4px' };
-const goBtnStyle: any = { marginTop:'10px', background:'#EEF2FF', color:'#3B82F6', border:'none', padding:'5px 10px', borderRadius:'5px', fontSize:'12px' };
+const tagStyle: any = { fontSize: "11px", color: "#fff", padding: "3px 8px", borderRadius: "8px", border: "none", marginTop: "8px" };
+const emptyStyle: any = { textAlign:'center', color:'#999', padding:'40px 0' };
 const interviewPageStyle: any = { padding:'15px' };
 const calendarCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px', marginBottom:'15px' };
 const calendarHeaderStyle: any = { display:'flex', justifyContent:'space-between', marginBottom:'10px' };
 const arrowStyle: any = { cursor:'pointer', color:'#3B82F6' };
 const monthStyle: any = { fontWeight:'bold' };
 const daysGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'5px' };
-const dayStyle: any = { height:'35px', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'13px', position:'relative', cursor:'pointer' };
+const dayStyle: any = { height:'35px', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'13px' };
 const dayActiveStyle: any = { ...dayStyle, background:'#3B82F6', color:'#fff', borderRadius:'50%' };
-const dotStyle: any = { width:'4px', height:'4px', background:'#10B981', borderRadius:'50%', position:'absolute', bottom:'2px' };
 const interviewDetailCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px' };
-const sectionTitleStyle: any = { fontSize:'16px', fontWeight:'bold', margin:'10px 0' };
-const recordBtnStyle: any = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px', fontWeight:'bold' };
-const stopRecordBtnStyle: any = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', fontWeight:'bold' };
-const transcriptCardStyle: any = { background:'#F3F4F6', padding:'15px', borderRadius:'12px', marginTop:'15px', minHeight:'60px', fontSize:'13px' };
-const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'15px', fontWeight:'bold' };
+const recordBtnStyle: any = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
+const recordingControlsStyle: any = { marginTop:'10px' };
+const stopRecordBtnStyle: any = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px' };
+const recordingTimerStyle: any = { textAlign:'center', fontSize:'12px', color:'#DC2626', marginTop:'5px' };
+const transcriptCardStyle: any = { background:'#F9FAFB', padding:'15px', borderRadius:'12px', marginTop:'10px' };
+const transcriptTextStyle: any = { fontSize:'13px', lineHeight:'1.5' };
+const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
 const reportPageStyle: any = { padding:'20px' };
 const aiBubbleStyle: any = { background:'#DBEAFE', padding:'20px', borderRadius:'15px', fontSize:'14px', whiteSpace:'pre-wrap' };
 
-// 补充缺失的课程样式
+// 课程与社区样式
 const coursePageStyle: any = { padding:'15px' };
-const courseGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'12px', marginBottom:'20px' };
-const courseCardGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'10px' };
+const courseGridStyle: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
+const courseCardGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'10px' };、
+const courseIconStyle: any = { fontSize:'24px', marginBottom:'8px' };
 const learningCourseCardStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px' };
 const learningCourseIcon: any = { fontSize:'20px' };
 const learningCourseTitle: any = { fontSize:'14px', fontWeight:'bold', margin:'5px 0' };
-
 // ✅ 修复点（新增）
 const learningCourseDesc: any = { fontSize:'12px', color:'#666', marginBottom:'5px' };
 const learningCoursePrice: any = { fontSize:'14px', color:'#3B82F6' };
+
+// 我的页面样式
+const profilePageStyle: any = { background: "#fff", height: "100%" };
+const profileHeaderLight: any = { padding: "30px 20px" };
+const userInfoCard: any = { display: "flex", alignItems: "center" };
+const avatarStyleLight: any = { width: "50px", height: "50px", borderRadius: "25px", background: "#eee", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "10px" };
+const levelCard: any = { margin:'0 20px', padding:'15px', background:'#f8f8f8', borderRadius:'12px', position:'relative' };
+const progressBarBg: any = { height:'4px', background:'#eee', borderRadius:'2px', overflow:'hidden' };
+const progressBarFill: any = { height:'100%', background:'#FFD700' };
+const xTag: any = { position:'absolute', right:'15px', bottom:'10px', fontSize:'10px', color:'#999' };
+const gridMenu: any = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 10px", gap:'15px' };
+const gridItem: any = { textAlign: "center" };
+const gridIconPlaceholder: any = { fontSize: "22px" };
+
+// 通用组件
+const bottomBarStyle: any = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #eee" };
+const bottomItemStyle: any = { fontSize: "12px", color: "#999", cursor:'pointer' };
+const bottomActiveStyle: any = { ...bottomItemStyle, color: "#3B82F6", fontWeight:'bold' };
+const bottomAddStyle: any = { width: "45px", height: "45px", background: "#3B82F6", borderRadius: "50%", color: "#fff", fontSize: "24px", display:'flex', justifyContent:'center', alignItems:'center', cursor:'pointer' };
+const modalStyle: any = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 };
+const modalContentStyle: any = { width: "300px", background: "#fff", borderRadius: "20px", padding: "25px", display: "flex", flexDirection: "column", gap: "15px" };
+const modalCloseStyle: any = { alignSelf: "flex-end", background: "none", border: "none", fontSize:'20px' };
+const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", cursor:'pointer' };
+const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee' };
+const subTitleStyle: any = { fontSize:'11px', color:'#999', marginBottom:'5px' };
+const detailTextStyle: any = { fontSize:'14px', marginBottom:'5px' };
+// ===== 缺失样式补全（不影响原功能）=====
+
+const emptyStyle: any = {
+  textAlign: "center",
+  color: "#999",
+  padding: "40px 0",
+  fontSize: "14px"
+};
+
+const tagStyle: any = {
+  marginTop: "10px",
+  padding: "6px 10px",
+  background: "#EEF2FF",
+  color: "#3B82F6",
+  border: "none",
+  borderRadius: "6px",
+  fontSize: "12px"
+};
+
+const emptyPurchasedStyle: any = {
+  textAlign: "center",
+  padding: "20px 0"
+};
+
+const modalCloseStyle: any = {
+  position: "absolute",
+  right: "10px",
+  top: "10px",
+  border: "none",
+  background: "transparent",
+  fontSize: "16px",
+  cursor: "pointer"
+};
+
+const detailTextStyle: any = {
+  fontSize: "13px",
+  color: "#666",
+  marginBottom: "10px"
+};
+
+const recordingControlsStyle: any = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+  marginTop: "10px"
+};
+
+const recordingTimerStyle: any = {
+  fontSize: "12px",
+  color: "#DC2626",
+  textAlign: "center"
+};
+
+const transcriptTextStyle: any = {
+  fontSize: "13px",
+  color: "#333"
+};
+
+const gridIconPlaceholder: any = {
+  width: "40px",
+  height: "40px",
+  borderRadius: "10px",
+  background: "#F3F4F6",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "18px"
+};
+
+// ⚠️ 你用了 xTag，但没定义
+const xTag: any = {
+  fontSize: "10px",
+  color: "#999"
+};
