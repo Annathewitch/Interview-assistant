@@ -683,19 +683,10 @@ const editorOverlay: React.CSSProperties = { position:'absolute', inset:0, backg
 const problemFloatingCard: React.CSSProperties = { background:'#333', padding:'15px', borderRadius:'12px', marginBottom:'15px' };
 const editorArea: React.CSSProperties = { flex:1, background:'#252526', color:'#fff', padding:'15px', fontFamily:'monospace', border:'none', outline:'none', borderRadius:'8px' };
 
-const sectionTitleStyle: React.CSSProperties = { fontSize:'16px', fontWeight:'bold', margin:'15px 0 10px 0' };
-
 // ===== 我的 =====
 const profilePageStyle: React.CSSProperties = { background: "#fff", height: "100%" };
 const profileHeaderLight: React.CSSProperties = { padding: "30px 20px" };
-const userInfoCard: React.CSSProperties = { display: "flex", alignItems: "center" };
-const avatarStyleLight: React.CSSProperties = { width: "50px", height: "50px", borderRadius: "25px", background: "#eee", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "10px" };
-
-const levelCard: React.CSSProperties = { margin:'0 20px', padding:'15px', background:'#f8f8f8', borderRadius:'12px', position:'relative' };
-const progressBarBg: React.CSSProperties = { height:'4px', background:'#eee', borderRadius:'2px', overflow:'hidden' };
-const progressBarFill: React.CSSProperties = { height:'100%', background:'#FFD700' };
 const xTag: React.CSSProperties = { position:'absolute', right:'15px', bottom:'10px', fontSize:'10px', color:'#999' };
-
 const gridMenu: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 10px", gap:'15px' };
 const gridItem: React.CSSProperties = { textAlign: "center" };
 const gridIconPlaceholder: React.CSSProperties = { fontSize: "22px" };
@@ -712,8 +703,6 @@ const modalCloseStyle: React.CSSProperties = { alignSelf: "flex-end", background
 const modalBtnStyle: React.CSSProperties = { background: "#3B82F6", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", cursor:'pointer' };
 
 const inputStyle: React.CSSProperties = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee' };
-const subTitleStyle: React.CSSProperties = { fontSize:'11px', color:'#999', marginBottom:'5px' };
-const detailTextStyle: React.CSSProperties = { fontSize:'14px', marginBottom:'5px' };
 
 // --- 补全缺失的课程页面样式 ---
 const adBannerContent: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '5px' };
@@ -754,7 +743,6 @@ const continueStudyBtnStyle: React.CSSProperties = {
 const emptyPurchasedStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 0' };
 
 // --- 补全缺失的“我的”页面样式 ---
-const profileHeaderLight: React.CSSProperties = { padding: "20px", background: "#fff" };
 const userInfoCard: React.CSSProperties = { display: "flex", alignItems: "center" };
 const avatarStyleLight: React.CSSProperties = { 
   width: "60px", height: "60px", borderRadius: "30px", background: "#E5E7EB", 
@@ -764,11 +752,6 @@ const avatarStyleLight: React.CSSProperties = {
 const levelCard: React.CSSProperties = { margin: '0 15px', padding: '15px', background: '#F3F4F6', borderRadius: '12px', position: 'relative' };
 const progressBarBg: React.CSSProperties = { height: '6px', background: '#E5E7EB', borderRadius: '3px', marginTop: '10px', overflow: 'hidden' };
 const progressBarFill: React.CSSProperties = { height: '100%', background: '#FBBF24' };
-const xTag: React.CSSProperties = { position: 'absolute', right: '15px', top: '15px', fontSize: '10px', color: '#3B82F6', fontWeight: 'bold' };
-
-const gridMenu: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 5px", rowGap: '20px' };
-const gridItem: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' };
-const gridIconPlaceholder: React.CSSProperties = { fontSize: "24px" };
 
 // --- 补全面试安排相关样式 ---
 const scheduleCardStyle: React.CSSProperties = { background: '#fff', borderRadius: '15px', padding: '15px', marginBottom: '15px' };
