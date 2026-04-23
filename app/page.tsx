@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // --- 全局声明接口，解决 TypeScript 报错 ---
 declare global {
@@ -61,7 +61,7 @@ export default function Page() {
   const [recording, setRecording] = useState(false);
   const [report, setReport] = useState("");
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const audioChunksRef = useRef<Blob[]>([]);
   const [recordingTime, setRecordingTime] = useState(0);
   const [realTimeTranscript, setRealTimeTranscript] = useState("");
 
@@ -72,12 +72,18 @@ export default function Page() {
 
   // 本地存储
   useEffect(() => {
-    const j = JSON.parse(localStorage.getItem("jobs") || "[]");
-    const i = JSON.parse(localStorage.getItem("interviews") || "[]");
-    setJobs(j);
-    setInterviews(i);
+    try {
+      const j = JSON.parse(localStorage.getItem("jobs") || "[]");
+      const i = JSON.parse(localStorage.getItem("interviews") || "[]");
+      setJobs(j);
+      setInterviews(i);
+    } catch (e) {
+      console.error("localStorage解析失败", e);
+      setJobs([]);
+      setInterviews([]);
+    }
   }, []);
-
+  
   const saveJobs = (data: Job[]) => { setJobs(data); localStorage.setItem("jobs", JSON.stringify(data)); };
   const saveInterviews = (data: Interview[]) => { setInterviews(data); localStorage.setItem("interviews", JSON.stringify(data)); };
 
@@ -91,19 +97,35 @@ export default function Page() {
   };
 
   const addInterview = () => {
-    if (!selectedJob || !interviewDate || !interviewTime) return;
-    const newInterview: Interview = { id: Date.now(), jobId: selectedJob.id, date: interviewDate, time: interviewTime, channel };
-    const newList = [newInterview, ...interviews];
-    saveInterviews(newList);
+    if (!selectedJob || !interviewDate || !interviewTime) {
+      alert("请选择岗位、日期和时间");
+      return;
+    }
+  
+    const newInterview: Interview = {
+      id: Date.now(),
+      jobId: selectedJob.id,
+      date: interviewDate,
+      time: interviewTime,
+      channel
+    };
+  
+    const updated = [newInterview, ...interviews];
+  
+    saveInterviews(updated);
+    setInterviews(updated); // ✅ 强制刷新
+  
     setSelectedDay(interviewDate);
     setCurrentInterview(newInterview);
-    setInterviewDate(""); setInterviewTime("");
+  
+    setInterviewDate("");
+    setInterviewTime("");
   };
 
   const handleSelectDay = (day: string) => {
     setSelectedDay(day);
-    const found = interviews.find(it => it.date === day) || null;
-    setCurrentInterview(found);
+    const found = interviews.filter(it => it.date === day);
+    setCurrentInterview(found.length > 0 ? found[0] : null);
   };
 
   const formatTime = (seconds: number) => {
@@ -115,29 +137,62 @@ export default function Page() {
   // --- 核心录音逻辑 (保持不变) ---
   const startRecording = async () => {
     if (!currentInterview) return;
-    setRecording(true); setAudioChunks([]); setRecordingTime(0); setRealTimeTranscript("");
-
+  
+    setRecording(true);
+    setRecordingTime(0);
+    setRealTimeTranscript("");
+    audioChunksRef.current = [];
+  
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) setAudioChunks(p => [...p, e.data]); };
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        if (currentInterview) {
-          const updated = interviews.map(it => it.id === currentInterview.id ? { ...it, transcript: realTimeTranscript || "未检测到语音", audioBlobUrl: audioUrl, recordingDuration: recordingTime } : it);
-          saveInterviews(updated);
-          setCurrentInterview({ ...currentInterview, transcript: realTimeTranscript, audioBlobUrl: audioUrl, recordingDuration: recordingTime });
+  
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
         }
       };
+  
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+  
+        if (currentInterview) {
+          const updated = interviews.map(it =>
+            it.id === currentInterview.id
+              ? {
+                  ...it,
+                  transcript: realTimeTranscript || "未检测到语音",
+                  audioBlobUrl: audioUrl,
+                  recordingDuration: recordingTime
+                }
+              : it
+          );
+  
+          saveInterviews(updated);
+          setCurrentInterview({
+            ...currentInterview,
+            transcript: realTimeTranscript,
+            audioBlobUrl: audioUrl,
+            recordingDuration: recordingTime
+          });
+        }
+      };
+  
       recorder.start(1000);
       setMediaRecorder(recorder);
-      const timer = setInterval(() => setRecordingTime(v => v + 1), 1000);
+  
+      const timer = window.setInterval(() => setRecordingTime(v => v + 1), 1000);
       window.recordingTimer = { current: timer };
+  
       startSpeechRecognition();
-    } catch (e) { console.error(e); setRecording(false); }
+  
+    } catch (e) {
+      console.error(e);
+      setRecording(false);
+    }
   };
-
+  
   const stopRecording = () => {
     if (mediaRecorder) { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t => t.stop()); }
     stopSpeechRecognition();
@@ -146,15 +201,24 @@ export default function Page() {
   };
 
   const startSpeechRecognition = () => {
+    if (window.currentRecognition) return; // ✅ 防止重复启动
+  
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
+  
     const recognition = new SpeechRecognition();
-    recognition.lang = 'zh-CN'; recognition.continuous = true; recognition.interimResults = true;
+    recognition.lang = 'zh-CN';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+  
     recognition.onresult = (event: any) => {
       let text = '';
-      for (let i = 0; i < event.results.length; i++) { text += event.results[i][0].transcript; }
+      for (let i = 0; i < event.results.length; i++) {
+        text += event.results[i][0].transcript;
+      }
       setRealTimeTranscript(text);
     };
+  
     recognition.start();
     window.currentRecognition = recognition;
   };
@@ -164,10 +228,30 @@ export default function Page() {
   };
 
   const goToReport = () => {
-    if (!currentInterview) return;
-    setReport(`【AI复盘】\n面试公司：${jobs.find(j=>j.id===currentInterview.jobId)?.company}\n内容：${currentInterview.transcript}\n建议：表现不错，建议加强基础知识储备。`);
-    setTopTab("复盘");
-  };
+  if (!currentInterview) return;
+  const content = currentInterview.transcript || "无语音内容";
+  setReport(`
+【AI面试复盘报告】
+
+📌 面试公司：${jobs.find(j=>j.id===currentInterview.jobId)?.company}
+
+📝 面试内容摘要：
+${content.slice(0, 100)}...
+
+📊 表现分析：
+- 表达流畅度：良好
+- 技术深度：中等
+- 逻辑清晰度：较好
+
+🚀 优化建议：
+1. 回答问题时可以更结构化（STAR法则）
+2. 项目细节建议补充数据指标
+3. 技术原理可进一步深入
+
+🎯 综合评分：7.5 / 10
+  `);
+  setTopTab("复盘");
+};
 
   return (
     <div style={appContainer}>
@@ -208,18 +292,88 @@ export default function Page() {
               <div style={interviewPageStyle}>
                 <div style={calendarCardStyle}>
                   <div style={calendarHeaderStyle}>
-                    <div onClick={() => setCurrentMonth(m => m === 1 ? 12 : m - 1)} style={arrowStyle}>◀</div>
+                    <div
+                      onClick={() => {
+                        if (currentMonth === 1) {
+                          setCurrentYear(y => y - 1);
+                          setCurrentMonth(12);
+                        } else {
+                          setCurrentMonth(m => m - 1);
+                        }
+                      }}
+                      style={arrowStyle}
+                    >
+                      ◀
+                    </div>
                     <div style={monthStyle}>{currentYear}年{currentMonth}月</div>
-                    <div onClick={() => setCurrentMonth(m => m === 12 ? 1 : m + 1)} style={arrowStyle}>▶</div>
+                    <div
+                      onClick={() => {
+                        if (currentMonth === 12) {
+                          setCurrentYear(y => y + 1);
+                          setCurrentMonth(1);
+                        } else {
+                          setCurrentMonth(m => m + 1);
+                        }
+                      }}
+                      style={arrowStyle}
+                    >
+                      ▶
+                    </div>
                   </div>
                   <div style={daysGridStyle}>
                     {Array.from({ length: 30 }, (_, i) => {
-                      const date = `${currentYear}-${currentMonth.toString().padStart(2,'0')}-${(i+1).toString().padStart(2,'0')}`;
-                      return <div key={date} onClick={() => handleSelectDay(date)} style={selectedDay === date ? dayActiveStyle : dayStyle}>{i+1}</div>
+                      const day = i + 1;
+                      const date = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      const hasInterview = interviews.some(it => it.date === date);
+                    
+                      return (
+                        <div
+                          key={date}
+                          onClick={() => handleSelectDay(date)}
+                          style={selectedDay === date ? dayActiveStyle : dayStyle}
+                        >
+                          {day}
+                          {hasInterview && <div style={dotStyle}></div>}
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
-
+                
+                {/* ===== 新增：面试安排卡片 ===== */}
+                <div style={scheduleCardStyle}>
+                  <div style={{fontWeight:'bold', marginBottom:'10px'}}>📅 安排面试</div>
+                
+                  {/* 当前选中岗位 */}
+                  <div style={subTitleStyle}>当前岗位</div>
+                  <div style={selectBoxStyle}>
+                    {selectedJob ? selectedJob.role : "请先从岗位页选择"}
+                  </div>
+                
+                  {/* 日期选择 */}
+                  <div style={subTitleStyle}>面试日期</div>
+                  <input
+                    type="date"
+                    value={interviewDate}
+                    onChange={(e) => setInterviewDate(e.target.value)}
+                    style={inputStyle}
+                  />
+                
+                  {/* 时间选择 */}
+                  <div style={subTitleStyle}>面试时间</div>
+                  <input
+                    type="time"
+                    value={interviewTime}
+                    onChange={(e) => setInterviewTime(e.target.value)}
+                    style={inputStyle}
+                  />
+                
+                  {/* 确认按钮 */}
+                  <button onClick={addInterview} style={confirmBtnStyle}>
+                    ✅ 确认安排面试
+                  </button>
+                </div>
+                
                 {selectedDay && currentInterview && (
                   <div style={interviewDetailCardStyle}>
                     <div style={sectionTitleStyle}>面试详情</div>
@@ -472,220 +626,158 @@ export default function Page() {
 }
 
 // ==================== 样式 (包含新增样式) ====================
-const appContainer: any = { width: "390px", height: "844px", margin: "20px auto", background: "#F9FAFB", borderRadius: "30px", overflow: "hidden", position: "relative", border:'8px solid #333' };
-const headerStyle: any = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
-const logoStyle: any = { fontSize: "16px", fontWeight: "bold" };
-const searchStyle: any = { flex: 1, padding: "8px 14px", borderRadius: "20px", background: "#F3F4F6", border: "none" };
-const topTabBarStyle: any = { display: "flex", background: "#fff", borderBottom: "1px solid #eee" };
-const topTabItemStyle: any = { flex: 1, textAlign: "center", padding: "12px 0", fontSize: "14px", color: "#999" };
-const topTabActiveStyle: any = { ...topTabItemStyle, color: "#3B82F6", fontWeight: "bold", borderBottom: "2px solid #3B82F6" };
-const contentStyle: any = { height: "calc(100% - 140px)", overflowY: "auto" };
-const listStyle: any = { padding: "15px" };
-const cardStyle: any = { background: "#fff", borderRadius: "12px", padding: "16px", marginBottom: "10px", boxShadow: '0 2px 8px rgba(0,0,0,0.05)' };
-const titleStyle: any = { fontSize: "16px", fontWeight: "bold" };
-const infoStyle: any = { fontSize: "13px", color: "#666", marginTop:'4px' };
-const tagStyle: any = { fontSize: "11px", color: "#fff", padding: "3px 8px", borderRadius: "8px", border: "none", marginTop: "8px" };
-const emptyStyle: any = { textAlign:'center', color:'#999', padding:'40px 0' };
-const interviewPageStyle: any = { padding:'15px' };
-const calendarCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px', marginBottom:'15px' };
-const calendarHeaderStyle: any = { display:'flex', justifyContent:'space-between', marginBottom:'10px' };
-const arrowStyle: any = { cursor:'pointer', color:'#3B82F6' };
-const monthStyle: any = { fontWeight:'bold' };
-const daysGridStyle: any = { display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'5px' };
-const dayStyle: any = { height:'35px', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'13px' };
-const dayActiveStyle: any = { ...dayStyle, background:'#3B82F6', color:'#fff', borderRadius:'50%' };
-const interviewDetailCardStyle: any = { background:'#fff', borderRadius:'15px', padding:'15px' };
-const recordBtnStyle: any = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
-const recordingControlsStyle: any = { marginTop:'10px' };
-const stopRecordBtnStyle: any = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px' };
-const recordingTimerStyle: any = { textAlign:'center', fontSize:'12px', color:'#DC2626', marginTop:'5px' };
-const transcriptCardStyle: any = { background:'#F9FAFB', padding:'15px', borderRadius:'12px', marginTop:'10px' };
-const transcriptTextStyle: any = { fontSize:'13px', lineHeight:'1.5' };
-const reportBtnStyle: any = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
-const reportPageStyle: any = { padding:'20px' };
-const aiBubbleStyle: any = { background:'#DBEAFE', padding:'20px', borderRadius:'15px', fontSize:'14px', whiteSpace:'pre-wrap' };
+const appContainer: React.CSSProperties = { width: "390px", height: "844px", margin: "20px auto", background: "#F9FAFB", borderRadius: "30px", overflow: "hidden", position: "relative", border:'8px solid #333' };
+const headerStyle: React.CSSProperties = { background: "#fff", padding: "15px 20px", display: "flex", alignItems: "center", gap: "10px" };
+const logoStyle: React.CSSProperties = { fontSize: "16px", fontWeight: "bold" };
+const searchStyle: React.CSSProperties = { flex: 1, padding: "8px 14px", borderRadius: "20px", background: "#F3F4F6", border: "none" };
+const topTabBarStyle: React.CSSProperties = { display: "flex", background: "#fff", borderBottom: "1px solid #eee" };
+const topTabItemStyle: React.CSSProperties = { flex: 1, textAlign: "center", padding: "12px 0", fontSize: "14px", color: "#999" };
+const topTabActiveStyle: React.CSSProperties = { ...topTabItemStyle, color: "#3B82F6", fontWeight: "bold", borderBottom: "2px solid #3B82F6" };
+const contentStyle: React.CSSProperties = { height: "calc(100% - 140px)", overflowY: "auto" };
+const listStyle: React.CSSProperties = { padding: "15px" };
+const cardStyle: React.CSSProperties = { background: "#fff", borderRadius: "12px", padding: "16px", marginBottom: "10px", boxShadow: '0 2px 8px rgba(0,0,0,0.05)' };
+const titleStyle: React.CSSProperties = { fontSize: "16px", fontWeight: "bold" };
+const infoStyle: React.CSSProperties = { fontSize: "13px", color: "#666", marginTop:'4px' };
+const tagStyle: React.CSSProperties = { fontSize: "11px", color: "#fff", padding: "3px 8px", borderRadius: "8px", border: "none", marginTop: "8px" };
+const emptyStyle: React.CSSProperties = { textAlign:'center', color:'#999', padding:'40px 0' };
 
-// 课程与社区样式
-const coursePageStyle: any = { padding:'15px' };
-const courseGridStyle: any = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
-const courseCardStyle: any = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center', cursor:'pointer' };
-const courseIconStyle: any = { fontSize:'24px', marginBottom:'8px' };
-const demoListStyle: any = { marginTop:'20px' };
-const demoItemStyle: any = { background:'#fff', padding:'12px', borderRadius:'10px', marginBottom:'10px', fontSize:'13px' };
-const editorOverlay: any = { position:'absolute', inset:0, background:'#1e1e1e', color:'#fff', zIndex:100, padding:'20px', display:'flex', flexDirection:'column' };
-const problemFloatingCard: any = { background:'#333', padding:'15px', borderRadius:'12px', marginBottom:'15px' };
-const editorArea: any = { flex:1, background:'#252526', color:'#fff', padding:'15px', fontFamily:'monospace', border:'none', outline:'none', borderRadius:'8px' };
-const sectionTitleStyle: any = { fontSize:'16px', fontWeight:'bold', margin:'15px 0 10px 0' };
+const interviewPageStyle: React.CSSProperties = { padding:'15px' };
+const calendarCardStyle: React.CSSProperties = { background:'#fff', borderRadius:'15px', padding:'15px', marginBottom:'15px' };
+const calendarHeaderStyle: React.CSSProperties = { display:'flex', justifyContent:'space-between', marginBottom:'10px' };
+const arrowStyle: React.CSSProperties = { cursor:'pointer', color:'#3B82F6' };
+const monthStyle: React.CSSProperties = { fontWeight:'bold' };
+const daysGridStyle: React.CSSProperties = { display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'5px' };
 
-// 我的页面样式
-const profilePageStyle: any = { background: "#fff", height: "100%" };
-const profileHeaderLight: any = { padding: "30px 20px" };
-const userInfoCard: any = { display: "flex", alignItems: "center" };
-const avatarStyleLight: any = { width: "50px", height: "50px", borderRadius: "25px", background: "#eee", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "10px" };
-const levelCard: any = { margin:'0 20px', padding:'15px', background:'#f8f8f8', borderRadius:'12px', position:'relative' };
-const progressBarBg: any = { height:'4px', background:'#eee', borderRadius:'2px', overflow:'hidden' };
-const progressBarFill: any = { height:'100%', background:'#FFD700' };
-const xTag: any = { position:'absolute', right:'15px', bottom:'10px', fontSize:'10px', color:'#999' };
-const gridMenu: any = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 10px", gap:'15px' };
-const gridItem: any = { textAlign: "center" };
-const gridIconPlaceholder: any = { fontSize: "22px" };
-
-// 通用组件
-const bottomBarStyle: any = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #eee" };
-const bottomItemStyle: any = { fontSize: "12px", color: "#999", cursor:'pointer' };
-const bottomActiveStyle: any = { ...bottomItemStyle, color: "#3B82F6", fontWeight:'bold' };
-const bottomAddStyle: any = { width: "45px", height: "45px", background: "#3B82F6", borderRadius: "50%", color: "#fff", fontSize: "24px", display:'flex', justifyContent:'center', alignItems:'center', cursor:'pointer' };
-const modalStyle: any = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 };
-const modalContentStyle: any = { width: "300px", background: "#fff", borderRadius: "20px", padding: "25px", display: "flex", flexDirection: "column", gap: "15px" };
-const modalCloseStyle: any = { alignSelf: "flex-end", background: "none", border: "none", fontSize:'20px' };
-const modalBtnStyle: any = { background: "#3B82F6", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", cursor:'pointer' };
-const inputStyle: any = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee' };
-const subTitleStyle: any = { fontSize:'11px', color:'#999', marginBottom:'5px' };
-const detailTextStyle: any = { fontSize:'14px', marginBottom:'5px' };
-
-// ==================== 新增课程页面样式 ====================
-const adBannerStyle: any = {
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  borderRadius: '15px',
-  padding: '20px',
-  margin: '20px 0',
-  color: '#fff',
-  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+// ❗关键修复点：不能再用 any
+const dayStyle: React.CSSProperties = {
+  height:'35px',
+  display:'flex',
+  justifyContent:'center',
+  alignItems:'center',
+  fontSize:'13px',
+  position:'relative'
 };
 
-const adBannerContent: any = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px'
+const dayActiveStyle: React.CSSProperties = { ...dayStyle, background:'#3B82F6', color:'#fff', borderRadius:'50%' };
+
+const interviewDetailCardStyle: React.CSSProperties = { background:'#fff', borderRadius:'15px', padding:'15px' };
+const recordBtnStyle: React.CSSProperties = { width:'100%', background:'#4F46E5', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
+const recordingControlsStyle: React.CSSProperties = { marginTop:'10px' };
+const stopRecordBtnStyle: React.CSSProperties = { width:'100%', background:'#DC2626', color:'#fff', border:'none', padding:'12px', borderRadius:'12px' };
+const recordingTimerStyle: React.CSSProperties = { textAlign:'center', fontSize:'12px', color:'#DC2626', marginTop:'5px' };
+const transcriptCardStyle: React.CSSProperties = { background:'#F9FAFB', padding:'15px', borderRadius:'12px', marginTop:'10px' };
+const transcriptTextStyle: React.CSSProperties = { fontSize:'13px', lineHeight:'1.5' };
+const reportBtnStyle: React.CSSProperties = { width:'100%', background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'12px', marginTop:'10px' };
+const reportPageStyle: React.CSSProperties = { padding:'20px' };
+const aiBubbleStyle: React.CSSProperties = { background:'#DBEAFE', padding:'20px', borderRadius:'15px', fontSize:'14px', whiteSpace:'pre-wrap' };
+
+// ===== 课程与社区 =====
+const coursePageStyle: React.CSSProperties = { padding:'15px' };
+const courseGridStyle: React.CSSProperties = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' };
+const courseCardStyle: React.CSSProperties = { background:'#fff', padding:'20px', borderRadius:'15px', textAlign:'center', cursor:'pointer' };
+const courseIconStyle: React.CSSProperties = { fontSize:'24px', marginBottom:'8px' };
+const demoListStyle: React.CSSProperties = { marginTop:'20px' };
+const demoItemStyle: React.CSSProperties = { background:'#fff', padding:'12px', borderRadius:'10px', marginBottom:'10px', fontSize:'13px' };
+
+const editorOverlay: React.CSSProperties = { position:'absolute', inset:0, background:'#1e1e1e', color:'#fff', zIndex:100, padding:'20px', display:'flex', flexDirection:'column' };
+const problemFloatingCard: React.CSSProperties = { background:'#333', padding:'15px', borderRadius:'12px', marginBottom:'15px' };
+const editorArea: React.CSSProperties = { flex:1, background:'#252526', color:'#fff', padding:'15px', fontFamily:'monospace', border:'none', outline:'none', borderRadius:'8px' };
+
+const sectionTitleStyle: React.CSSProperties = { fontSize:'16px', fontWeight:'bold', margin:'15px 0 10px 0' };
+
+// ===== 我的 =====
+const profilePageStyle: React.CSSProperties = { background: "#fff", height: "100%" };
+const profileHeaderLight: React.CSSProperties = { padding: "30px 20px" };
+const userInfoCard: React.CSSProperties = { display: "flex", alignItems: "center" };
+const avatarStyleLight: React.CSSProperties = { width: "50px", height: "50px", borderRadius: "25px", background: "#eee", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "10px" };
+
+const levelCard: React.CSSProperties = { margin:'0 20px', padding:'15px', background:'#f8f8f8', borderRadius:'12px', position:'relative' };
+const progressBarBg: React.CSSProperties = { height:'4px', background:'#eee', borderRadius:'2px', overflow:'hidden' };
+const progressBarFill: React.CSSProperties = { height:'100%', background:'#FFD700' };
+const xTag: React.CSSProperties = { position:'absolute', right:'15px', bottom:'10px', fontSize:'10px', color:'#999' };
+
+const gridMenu: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 10px", gap:'15px' };
+const gridItem: React.CSSProperties = { textAlign: "center" };
+const gridIconPlaceholder: React.CSSProperties = { fontSize: "22px" };
+
+// ===== 通用 =====
+const bottomBarStyle: React.CSSProperties = { position: "absolute", bottom: 0, width: "100%", height: "70px", background: "#fff", display: "flex", justifyContent: "space-around", alignItems: "center", borderTop: "1px solid #eee" };
+const bottomItemStyle: React.CSSProperties = { fontSize: "12px", color: "#999", cursor:'pointer' };
+const bottomActiveStyle: React.CSSProperties = { ...bottomItemStyle, color: "#3B82F6", fontWeight:'bold' };
+const bottomAddStyle: React.CSSProperties = { width: "45px", height: "45px", background: "#3B82F6", borderRadius: "50%", color: "#fff", fontSize: "24px", display:'flex', justifyContent:'center', alignItems:'center', cursor:'pointer' };
+
+const modalStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 };
+const modalContentStyle: React.CSSProperties = { width: "300px", background: "#fff", borderRadius: "20px", padding: "25px", display: "flex", flexDirection: "column", gap: "15px" };
+const modalCloseStyle: React.CSSProperties = { alignSelf: "flex-end", background: "none", border: "none", fontSize:'20px' };
+const modalBtnStyle: React.CSSProperties = { background: "#3B82F6", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", cursor:'pointer' };
+
+const inputStyle: React.CSSProperties = { width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #eee' };
+const subTitleStyle: React.CSSProperties = { fontSize:'11px', color:'#999', marginBottom:'5px' };
+const detailTextStyle: React.CSSProperties = { fontSize:'14px', marginBottom:'5px' };
+
+// --- 补全缺失的课程页面样式 ---
+const adBannerContent: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '5px' };
+const adBannerTitle: React.CSSProperties = { fontSize: '18px', fontWeight: 'bold' };
+const adBannerSubtitle: React.CSSProperties = { fontSize: '12px', opacity: 0.9 };
+const adBannerPrice: React.CSSProperties = { fontSize: '14px', margin: '10px 0' };
+const adBannerStyle: React.CSSProperties = { 
+  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', 
+  borderRadius: '15px', padding: '20px', color: '#fff', margin: '15px 0' 
+};
+const adBannerButton: React.CSSProperties = { 
+  background: '#fff', color: '#3B82F6', padding: '8px 15px', borderRadius: '20px', 
+  fontSize: '12px', fontWeight: 'bold', width: 'fit-content', textAlign: 'center' 
 };
 
-const adBannerTitle: any = {
-  fontSize: '18px',
-  fontWeight: 'bold'
+const courseNavStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-around', background: '#fff', marginBottom: '10px' };
+const courseNavItemStyle: React.CSSProperties = { padding: '10px 0', fontSize: '14px', color: '#999', cursor: 'pointer' };
+const courseNavActiveStyle: React.CSSProperties = { ...courseNavItemStyle, color: '#3B82F6', fontWeight: 'bold', borderBottom: '2px solid #3B82F6' };
+const courseContentStyle: React.CSSProperties = { paddingBottom: '20px' };
+
+const hotCourseItemStyle: React.CSSProperties = { 
+  background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '10px', 
+  display: 'flex', flexDirection: 'column', borderLeft: '4px solid #FBBF24' 
 };
 
-const adBannerSubtitle: any = {
-  fontSize: '13px',
-  opacity: 0.9
+const courseCardGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' };
+const learningCourseCardStyle: React.CSSProperties = { background: '#fff', padding: '15px', borderRadius: '12px', textAlign: 'center' };
+const learningCourseIcon: React.CSSProperties = { fontSize: '24px', marginBottom: '5px' };
+const learningCourseTitle: React.CSSProperties = { fontSize: '14px', fontWeight: 'bold' };
+const learningCourseDesc: React.CSSProperties = { fontSize: '11px', color: '#999', margin: '5px 0' };
+const learningCoursePrice: React.CSSProperties = { fontSize: '13px', color: '#EF4444', fontWeight: 'bold' };
+
+const purchasedCourseItemStyle: React.CSSProperties = { background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '10px' };
+const continueStudyBtnStyle: React.CSSProperties = { 
+  marginTop: '10px', width: '100%', padding: '8px', borderRadius: '8px', 
+  border: '1px solid #3B82F6', color: '#3B82F6', background: 'none', fontSize: '12px', cursor: 'pointer' 
+};
+const emptyPurchasedStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 0' };
+
+// --- 补全缺失的“我的”页面样式 ---
+const profileHeaderLight: React.CSSProperties = { padding: "20px", background: "#fff" };
+const userInfoCard: React.CSSProperties = { display: "flex", alignItems: "center" };
+const avatarStyleLight: React.CSSProperties = { 
+  width: "60px", height: "60px", borderRadius: "30px", background: "#E5E7EB", 
+  display: "flex", justifyContent: "center", alignItems: "center", fontSize: "12px", color: "#666" 
 };
 
-const adBannerPrice: any = {
-  fontSize: '14px',
-  marginTop: '8px',
-  textDecoration: 'line-through',
-  opacity: 0.8
-};
+const levelCard: React.CSSProperties = { margin: '0 15px', padding: '15px', background: '#F3F4F6', borderRadius: '12px', position: 'relative' };
+const progressBarBg: React.CSSProperties = { height: '6px', background: '#E5E7EB', borderRadius: '3px', marginTop: '10px', overflow: 'hidden' };
+const progressBarFill: React.CSSProperties = { height: '100%', background: '#FBBF24' };
+const xTag: React.CSSProperties = { position: 'absolute', right: '15px', top: '15px', fontSize: '10px', color: '#3B82F6', fontWeight: 'bold' };
 
-const adBannerButton: any = {
-  background: '#FFD700',
-  color: '#333',
-  padding: '10px 20px',
-  borderRadius: '25px',
-  textAlign: 'center',
-  fontWeight: 'bold',
-  marginTop: '12px',
-  cursor: 'pointer',
-  width: 'fit-content'
-};
+const gridMenu: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "20px 5px", rowGap: '20px' };
+const gridItem: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' };
+const gridIconPlaceholder: React.CSSProperties = { fontSize: "24px" };
 
-const courseNavStyle: any = {
-  display: 'flex',
-  justifyContent: 'space-around',
-  background: '#fff',
-  borderRadius: '12px',
-  padding: '8px',
-  marginBottom: '15px'
+// --- 补全面试安排相关样式 ---
+const scheduleCardStyle: React.CSSProperties = { background: '#fff', borderRadius: '15px', padding: '15px', marginBottom: '15px' };
+const subTitleStyle: React.CSSProperties = { fontSize: '12px', color: '#999', marginBottom: '5px', marginTop: '10px' };
+const selectBoxStyle: React.CSSProperties = { padding: '10px', background: '#F3F4F6', borderRadius: '8px', fontSize: '14px', color: '#333' };
+const confirmBtnStyle: React.CSSProperties = { 
+  width: '100%', background: '#3B82F6', color: '#fff', border: 'none', 
+  padding: '12px', borderRadius: '10px', marginTop: '20px', fontWeight: 'bold', cursor: 'pointer' 
 };
-
-const courseNavItemStyle: any = {
-  padding: '8px 12px',
-  fontSize: '14px',
-  color: '#666',
-  cursor: 'pointer'
-};
-
-const courseNavActiveStyle: any = {
-  ...courseNavItemStyle,
-  color: '#3B82F6',
-  fontWeight: 'bold',
-  borderBottom: '2px solid #3B82F6'
-};
-
-const courseContentStyle: any = {
-  marginTop: '10px'
-};
-
-const hotCourseItemStyle: any = {
-  background: '#fff',
-  padding: '15px',
-  borderRadius: '12px',
-  marginBottom: '10px',
-  borderLeft: '4px solid #EF4444'
-};
-
-const courseCardGridStyle: any = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '12px',
-  marginTop: '10px'
-};
-
-const learningCourseCardStyle: any = {
-  background: '#fff',
-  padding: '15px',
-  borderRadius: '12px',
-  textAlign: 'center',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-};
-
-const learningCourseIcon: any = {
-  fontSize: '28px',
-  marginBottom: '8px'
-};
-
-const learningCourseTitle: any = {
-  fontSize: '14px',
-  fontWeight: 'bold',
-  marginBottom: '4px'
-};
-
-const learningCourseDesc: any = {
-  fontSize: '11px',
-  color: '#666',
-  marginBottom: '8px',
-  lineHeight: '1.3'
-};
-
-const learningCoursePrice: any = {
-  fontSize: '16px',
-  color: '#DC2626',
-  fontWeight: 'bold'
-};
-
-const purchasedCourseItemStyle: any = {
-  background: '#fff',
-  padding: '15px',
-  borderRadius: '12px',
-  marginBottom: '12px',
-  border: '1px solid #E5E7EB'
-};
-
-const continueStudyBtnStyle: any = {
-  background: '#3B82F6',
-  color: '#fff',
-  border: 'none',
-  padding: '8px 16px',
-  borderRadius: '8px',
-  fontSize: '12px',
-  marginTop: '10px',
-  cursor: 'pointer',
-  width: '100%'
-};
-
-const emptyPurchasedStyle: any = {
-  textAlign: 'center',
-  padding: '30px 20px',
-  background: '#F9FAFB',
-  borderRadius: '12px',
-  marginTop: '20px'
-};
+const dotStyle: React.CSSProperties = { width: '4px', height: '4px', background: '#EF4444', borderRadius: '50%', position: 'absolute', bottom: '2px' };
+const sectionTitleStyle: React.CSSProperties = { fontSize: '15px', fontWeight: 'bold', margin: '10px 0' };
+const detailTextStyle: React.CSSProperties = { fontSize: '14px', color: '#333', marginBottom: '10px' };
