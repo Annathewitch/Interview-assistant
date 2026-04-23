@@ -6,7 +6,7 @@ declare global {
   interface Window {
     SpeechRecognition: any;
     webkitSpeechRecognition: any;
-    recordingTimer?: { current: NodeJS.Timeout };
+    recordingTimer?: { current: any };
     currentRecognition?: any;
   }
 }
